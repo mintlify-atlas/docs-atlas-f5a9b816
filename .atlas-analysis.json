@@ -1,0 +1,122 @@
+{
+  "projectType": "saas",
+  "projectName": "Gridfinity Builder",
+  "projectDescription": "Browser-based parametric CAD tool for designing, previewing, and exporting 3D-printable Gridfinity storage layouts.",
+  "theme": "palm",
+  "primaryColor": "#fc0404",
+  "lightColor": "#fc7c7c",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/2d-grid",
+              "features/3d-preview",
+              "features/bin-configurator",
+              "features/export-3mf",
+              "features/auto-fill"
+            ]
+          },
+          {
+            "group": "Gridfinity Spec",
+            "pages": [
+              "gridfinity/specification",
+              "gridfinity/geometry",
+              "gridfinity/presets"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/keyboard-shortcuts",
+              "guides/printer-presets",
+              "guides/layout-templates",
+              "guides/sharing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Architecture",
+        "groups": [
+          {
+            "group": "Technical Details",
+            "pages": [
+              "architecture/overview",
+              "architecture/geometry-pipeline",
+              "architecture/csg-algorithm",
+              "architecture/web-workers"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "pages": [
+              "api/store",
+              "api/gridfinity-constants",
+              "api/bin-geometry",
+              "api/baseplate-geometry",
+              "api/export-3mf"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "development/local-setup",
+              "development/docker",
+              "development/building"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/project-structure",
+              "development/technology-stack",
+              "development/browser-compatibility"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Interactive 2D grid designer with drag-and-drop bin placement",
+    "Real-time 3D preview with multiple render modes (Solid, X-Ray, Blueprint)",
+    "Accurate Gridfinity specification geometry with CSG operations",
+    "3MF export for direct import to slicers (PrusaSlicer, Cura, Bambu Studio)",
+    "Auto-fill and layout optimization tools",
+    "Bill of materials with PLA cost calculation",
+    "Progressive Web App with offline support",
+    "URL sharing for layouts",
+    "Configurable printer and baseplate presets",
+    "Interior dividers, stacking lips, magnet/screw holes"
+  ],
+  "publicApiSurface": [
+    "useStore - Zustand store with bins, grid, and UI state",
+    "GF constants - Gridfinity dimensions and tolerances",
+    "GRID_PRESETS - Bambu Lab printer presets (A1, A1 Mini, P1S, X1C, etc.)",
+    "BIN_PRESETS - Common bin configurations",
+    "LAYOUT_TEMPLATES - Pre-made layouts (IKEA Alex, Electronics Bench, etc.)",
+    "generateBinGeometry() - Manifold CSG bin generation",
+    "generateBaseplateGeometry() - Manifold CSG baseplate generation",
+    "export3MF() - 3MF file packaging and download",
+    "useManifold() - WASM initialization hook",
+    "useManifoldWorker() - Web Worker interface hook"
+  ]
+}
