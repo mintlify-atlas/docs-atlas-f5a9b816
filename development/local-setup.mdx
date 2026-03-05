@@ -1,0 +1,186 @@
+---
+title: Local Development Setup
+description: Set up Gridfinity Builder for local development with Node.js
+icon: 'laptop-code'
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js 18+** (LTS recommended)
+- **npm 9+**
+
+You can verify your installation by running:
+
+```bash
+node --version
+npm --version
+```
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Gridfinity Builder repository from GitHub:
+
+    ```bash
+    git clone https://github.com/tunelko/gridfinity-BambuLab-3D.git
+    cd gridfinity-BambuLab-3D
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages:
+
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+
+      ```bash pnpm
+      pnpm install
+      ```
+    </CodeGroup>
+
+    This will install all dependencies including:
+    - React 18.3.1
+    - Three.js for 3D rendering
+    - Manifold WASM CSG engine
+    - Vite build tool
+    - TypeScript compiler
+  </Step>
+
+  <Step title="Start the development server">
+    Run the Vite development server:
+
+    <CodeGroup>
+      ```bash npm
+      npm run dev
+      ```
+
+      ```bash yarn
+      yarn dev
+      ```
+
+      ```bash pnpm
+      pnpm dev
+      ```
+    </CodeGroup>
+
+    The server will start on port 5173 with hot module replacement enabled.
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:5173
+    ```
+
+    The app should load with the Gridfinity Builder interface.
+  </Step>
+</Steps>
+
+## Development Features
+
+The development server includes:
+
+- **Hot Module Replacement (HMR)** - Changes reflect instantly without full page reload
+- **TypeScript support** - Full type checking and IntelliSense
+- **PWA dev mode** - Service worker enabled in development
+- **File watching** - Automatically rebuilds on file changes
+
+## Project Structure
+
+```
+src/
+├── main.tsx                     # Entry point
+├── App.tsx                      # Layout: Toolbar + Sidebar + Canvas
+├── store/
+│   └── useStore.ts              # Zustand store (bins, grid, undo/redo)
+├── components/
+│   ├── Toolbar.tsx              # Top bar: view modes, export, camera
+│   ├── Sidebar.tsx              # Left panel: presets, bin list, BOM
+│   ├── GridCanvas2D.tsx         # 2D SVG grid interactions
+│   └── Viewport3D.tsx           # Three.js 3D preview
+├── gridfinity/
+│   ├── binGeometry.ts           # Manifold CSG bin generation
+│   ├── baseplateGeometry.ts     # Baseplate generation
+│   └── export3mf.ts             # 3MF packaging
+└── workers/
+    └── manifoldWorker.ts        # Background geometry generation
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 5173 already in use">
+    If port 5173 is already occupied, Vite will automatically try the next available port (5174, 5175, etc.). Check the terminal output for the actual port.
+
+    Alternatively, you can specify a different port:
+
+    ```bash
+    npm run dev -- --port 3000
+    ```
+  </Accordion>
+
+  <Accordion title="WASM module fails to load">
+    The Manifold 3D WASM module may fail to load due to browser restrictions or CORS issues.
+
+    **Solution:**
+    - Clear your browser cache
+    - Ensure you're using a modern browser (Chrome, Edge, Firefox)
+    - Check the browser console for specific error messages
+    - Verify that `manifold-3d` is properly installed in `node_modules`
+  </Accordion>
+
+  <Accordion title="TypeScript errors on install">
+    If you see TypeScript compilation errors:
+
+    ```bash
+    # Clear node_modules and reinstall
+    rm -rf node_modules package-lock.json
+    npm install
+
+    # Ensure TypeScript version is correct
+    npm list typescript
+    ```
+
+    The project requires TypeScript ~5.6.2.
+  </Accordion>
+
+  <Accordion title="Hot reload not working">
+    If changes aren't reflected automatically:
+
+    1. Check that you're editing files inside the `src/` directory
+    2. Restart the dev server: `Ctrl+C` then `npm run dev`
+    3. Clear browser cache and hard reload (`Ctrl+Shift+R`)
+    4. If using Docker, ensure volumes are mounted correctly
+  </Accordion>
+
+  <Accordion title="Out of memory errors">
+    The WASM CSG operations can be memory-intensive:
+
+    ```bash
+    # Increase Node.js memory limit
+    export NODE_OPTIONS="--max-old-space-size=4096"
+    npm run dev
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Docker Setup" icon="docker" href="/development/docker">
+    Run Gridfinity Builder in a containerized environment
+  </Card>
+  <Card title="Building for Production" icon="box" href="/development/building">
+    Create optimized production builds
+  </Card>
+</CardGroup>

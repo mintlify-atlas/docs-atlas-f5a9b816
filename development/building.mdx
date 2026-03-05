@@ -1,0 +1,432 @@
+---
+title: Building for Production
+description: Create optimized production builds of Gridfinity Builder
+icon: 'box'
+---
+
+## Overview
+
+Gridfinity Builder uses Vite to create optimized production builds with TypeScript compilation, code splitting, tree-shaking, and minification.
+
+## Build Process
+
+<Steps>
+  <Step title="Run TypeScript compiler">
+    First, TypeScript compiles your code and checks for type errors:
+
+    ```bash
+    tsc -b
+    ```
+
+    This step:
+    - Type-checks all `.ts` and `.tsx` files
+    - Generates declaration files if needed
+    - Validates TypeScript configuration
+  </Step>
+
+  <Step title="Build with Vite">
+    Create the production bundle:
+
+    <CodeGroup>
+      ```bash npm
+      npm run build
+      ```
+
+      ```bash yarn
+      yarn build
+      ```
+
+      ```bash pnpm
+      pnpm build
+      ```
+    </CodeGroup>
+
+    The `build` script runs:
+    ```json
+    "build": "tsc -b && vite build"
+    ```
+  </Step>
+
+  <Step title="Verify the build">
+    Check the build output in the `dist/` directory:
+
+    ```bash
+    ls -lh dist/
+    ```
+
+    You should see:
+    - `index.html` - Entry HTML file
+    - `assets/` - Bundled JS, CSS, and chunks
+    - WASM files (manifold-3d)
+    - PWA assets (service worker, manifest)
+  </Step>
+</Steps>
+
+## Build Output
+
+The production build creates an optimized `dist/` directory:
+
+```
+dist/
+├── index.html                    # Entry point
+├── assets/
+│   ├── index-[hash].js          # Main bundle (code-split)
+│   ├── index-[hash].css         # Compiled Tailwind CSS
+│   ├── manifold-[hash].wasm     # Manifold WASM module
+│   └── [chunk]-[hash].js        # Code-split chunks
+├── icons/
+│   ├── icon-192.png
+│   └── icon-512.png
+├── manifest.webmanifest          # PWA manifest
+└── sw.js                         # Service worker
+```
+
+### Optimization Features
+
+- **Code splitting** - Lazy-loaded routes and components
+- **Tree shaking** - Unused code eliminated
+- **Minification** - JavaScript and CSS compressed
+- **Asset hashing** - Cache-busting file names
+- **WASM optimization** - Manifold 3D module bundled efficiently
+- **PWA caching** - Service worker for offline support
+
+## Preview Production Build
+
+Test the production build locally before deployment:
+
+<CodeGroup>
+  ```bash npm
+  npm run preview
+  ```
+
+  ```bash yarn
+  yarn preview
+  ```
+
+  ```bash pnpm
+  pnpm preview
+  ```
+</CodeGroup>
+
+This starts a local static file server:
+
+```
+➜  Local:   http://localhost:4173/
+➜  Network: http://192.168.1.100:4173/
+```
+
+<Note>
+  The preview server uses port 4173 by default, different from the dev server (5173).
+</Note>
+
+## Build Configuration
+
+The build is configured in `vite.config.ts`:
+
+```typescript
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+    VitePWA({
+      registerType: 'prompt',
+      includeAssets: ['icons/*.png', 'icons/*.svg'],
+      manifest: {
+        name: 'Gridfinity Builder',
+        short_name: 'Gridfinity',
+        description: 'Browser-based parametric CAD for Gridfinity',
+        theme_color: '#0a0a0f',
+        background_color: '#0a0a0f',
+        display: 'standalone',
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,wasm,woff2}'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+      },
+    }),
+  ],
+  optimizeDeps: {
+    exclude: ['manifold-3d'],
+  },
+});
+```
+
+### Key Configuration
+
+| Option | Purpose |
+|--------|----------|
+| `@vitejs/plugin-react` | Fast Refresh, JSX transform |
+| `@tailwindcss/vite` | Tailwind CSS processing |
+| `vite-plugin-pwa` | Service worker generation |
+| `optimizeDeps.exclude` | Exclude Manifold WASM from pre-bundling |
+
+## Deployment
+
+### Static Hosting
+
+The `dist/` folder can be deployed to any static hosting service:
+
+<CodeGroup>
+  ```bash Vercel
+  # Install Vercel CLI
+  npm i -g vercel
+  
+  # Deploy
+  vercel --prod
+  ```
+
+  ```bash Netlify
+  # Install Netlify CLI
+  npm i -g netlify-cli
+  
+  # Deploy
+  netlify deploy --prod --dir=dist
+  ```
+
+  ```bash GitHub Pages
+  # Build
+  npm run build
+  
+  # Deploy to gh-pages branch
+  npx gh-pages -d dist
+  ```
+
+  ```bash AWS S3
+  # Build
+  npm run build
+  
+  # Upload to S3
+  aws s3 sync dist/ s3://your-bucket-name/
+  ```
+</CodeGroup>
+
+### Server Requirements
+
+<Warning>
+  Ensure your server is configured correctly for Single Page Applications (SPAs).
+</Warning>
+
+**Required configurations:**
+
+1. **MIME types** - Serve `.wasm` files with correct MIME type:
+   ```
+   application/wasm
+   ```
+
+2. **Fallback routing** - All routes should serve `index.html` (for client-side routing):
+
+   **Nginx:**
+   ```nginx
+   location / {
+     try_files $uri $uri/ /index.html;
+   }
+   ```
+
+   **Apache (`.htaccess`):**
+   ```apache
+   RewriteEngine On
+   RewriteCond %{REQUEST_FILENAME} !-f
+   RewriteCond %{REQUEST_FILENAME} !-d
+   RewriteRule . /index.html [L]
+   ```
+
+3. **HTTPS** - Required for PWA installation and service workers
+
+4. **CORS headers** - If serving WASM from CDN:
+   ```
+   Access-Control-Allow-Origin: *
+   Cross-Origin-Embedder-Policy: require-corp
+   Cross-Origin-Opener-Policy: same-origin
+   ```
+
+### Environment Variables
+
+Vite exposes environment variables prefixed with `VITE_`:
+
+```bash
+# .env.production
+VITE_API_URL=https://api.example.com
+VITE_ANALYTICS_ID=UA-XXXXXXX
+```
+
+Access in code:
+```typescript
+const apiUrl = import.meta.env.VITE_API_URL;
+```
+
+## Build Optimization Tips
+
+<AccordionGroup>
+  <Accordion title="Reduce bundle size">
+    **Analyze bundle:**
+    ```bash
+    npm install -D rollup-plugin-visualizer
+    ```
+
+    Add to `vite.config.ts`:
+    ```typescript
+    import { visualizer } from 'rollup-plugin-visualizer';
+
+    plugins: [
+      visualizer({ open: true, filename: 'bundle-analysis.html' })
+    ]
+    ```
+
+    Run `npm run build` to generate an interactive bundle analysis.
+  </Accordion>
+
+  <Accordion title="Enable compression">
+    Add Brotli/Gzip compression:
+
+    ```bash
+    npm install -D vite-plugin-compression
+    ```
+
+    ```typescript
+    import viteCompression from 'vite-plugin-compression';
+
+    plugins: [
+      viteCompression({ algorithm: 'brotliCompress', ext: '.br' }),
+      viteCompression({ algorithm: 'gzip', ext: '.gz' })
+    ]
+    ```
+  </Accordion>
+
+  <Accordion title="Split vendor chunks">
+    Separate third-party libraries for better caching:
+
+    ```typescript
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'three-vendor': ['three'],
+            'manifold-vendor': ['manifold-3d'],
+          },
+        },
+      },
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Optimize WASM loading">
+    The Manifold WASM module is large (~5MB). Ensure:
+
+    1. **Lazy load** - Only load when needed (already implemented via Web Worker)
+    2. **Cache** - Service worker caches WASM file
+    3. **CDN** - Serve from CDN with Brotli compression
+    4. **Preload** - Add to `index.html`:
+       ```html
+       <link rel="preload" href="/assets/manifold.wasm" as="fetch" crossorigin>
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with TypeScript errors">
+    TypeScript compilation must succeed before Vite builds:
+
+    ```bash
+    # Check for type errors
+    tsc --noEmit
+
+    # Fix or skip type checking (not recommended)
+    vite build --mode production
+    ```
+  </Accordion>
+
+  <Accordion title="WASM module not loading in production">
+    Ensure your server:
+    1. Serves `.wasm` with MIME type `application/wasm`
+    2. Has correct CORS headers if WASM is on a different origin
+    3. Uses HTTPS (required for SharedArrayBuffer)
+
+    Test locally:
+    ```bash
+    npm run preview
+    # Open browser console and check for WASM errors
+    ```
+  </Accordion>
+
+  <Accordion title="Service worker not updating">
+    Clear the service worker cache:
+
+    ```bash
+    # Increment version in vite.config.ts
+    manifest: {
+      version: '1.0.1',  // Bump this
+    }
+    ```
+
+    In browser DevTools:
+    1. Application → Service Workers → Unregister
+    2. Application → Storage → Clear site data
+    3. Hard refresh (Ctrl+Shift+R)
+  </Accordion>
+
+  <Accordion title="Large bundle size">
+    If the bundle is unexpectedly large:
+
+    ```bash
+    # Analyze with visualizer
+    npm install -D rollup-plugin-visualizer
+    npm run build
+    ```
+
+    Common causes:
+    - Unused dependencies (check `package.json`)
+    - Large assets not lazy-loaded
+    - Duplicate dependencies (check with `npm ls <package>`)
+  </Accordion>
+</AccordionGroup>
+
+## CI/CD Example
+
+### GitHub Actions
+
+```yaml .github/workflows/deploy.yml
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Local Setup" icon="laptop-code" href="/development/local-setup">
+    Set up your development environment
+  </Card>
+  <Card title="Docker Development" icon="docker" href="/development/docker">
+    Run in a containerized environment
+  </Card>
+</CardGroup>

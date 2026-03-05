@@ -1,0 +1,234 @@
+---
+title: Technology Stack
+description: Core technologies and libraries used in Gridfinity Builder
+---
+
+## Core Technologies
+
+### React 18.3.1
+
+Modern React with concurrent features and improved rendering performance.
+
+**Why React?**
+- Component-based architecture for UI modularity
+- Efficient rendering with Virtual DOM
+- Strong ecosystem and TypeScript support
+- Excellent developer experience with hot reload
+
+### TypeScript 5.6.2
+
+Type-safe JavaScript with strict compiler settings.
+
+**Configuration highlights:**
+- Target: ES2020
+- Strict mode enabled
+- JSX: `react-jsx` (automatic runtime)
+- Module resolution: `bundler` (Vite-optimized)
+
+**Why TypeScript?**
+- Catch bugs at compile time
+- Better IDE support with IntelliSense
+- Self-documenting code with type annotations
+- Safer refactoring
+
+### Vite 6.0.0
+
+Next-generation frontend build tool with lightning-fast HMR.
+
+**Why Vite?**
+- Instant server start with native ES modules
+- Lightning-fast Hot Module Replacement (HMR)
+- Optimized production builds with Rollup
+- Out-of-the-box TypeScript support
+- Excellent PWA integration
+
+## State Management
+
+### Zustand 5.0.0
+
+Minimalist state management library for React.
+
+**Why Zustand?**
+- Simple API with minimal boilerplate
+- No providers or context required
+- Built-in middleware support (undo/redo)
+- Excellent TypeScript inference
+- Small bundle size (~1KB)
+- Easy to implement time-travel debugging
+
+## 3D Graphics & Geometry
+
+### Three.js 0.170.0
+
+Powerful 3D graphics library built on WebGL.
+
+**Why Three.js?**
+- Industry-standard for web 3D rendering
+- Rich API for cameras, lights, materials
+- Built-in OrbitControls for camera manipulation
+- Efficient rendering pipeline
+- PBR (Physically Based Rendering) materials
+
+### Manifold 3D 3.3.2
+
+High-performance WASM CSG (Constructive Solid Geometry) engine.
+
+**Why Manifold?**
+- Guaranteed manifold (watertight) meshes
+- Fast boolean operations (union, difference, intersection)
+- Runs in WebAssembly for near-native performance
+- Perfect for generating 3D-printable geometry
+- Produces clean, valid meshes for export
+
+**CSG Operations:**
+```typescript
+// Example CSG workflow
+outer_shell = box.rounded()
+inner_cavity = box.scaled()
+bin = outer_shell.subtract(inner_cavity)
+bin = bin.union(base_profile)
+bin = bin.subtract(magnet_holes)
+```
+
+## File Handling
+
+### JSZip 3.10.1
+
+Create and manipulate ZIP archives in JavaScript.
+
+**Why JSZip?**
+- Required for 3MF export (3MF is a ZIP-based format)
+- Pure JavaScript, works entirely client-side
+- Supports both text and binary content
+- Implements OPC (Open Packaging Conventions)
+
+**Usage in Gridfinity Builder:**
+- Packages 3MF XML files
+- Bundles multiple objects in one archive
+- Creates valid OPC-compliant 3MF files
+
+### UUID 11.0.0
+
+Generate RFC4122-compliant unique identifiers.
+
+**Why UUID?**
+- Unique bin IDs for reliable tracking
+- Collision-free object identification
+- Required for 3MF object referencing
+
+## Styling
+
+### Tailwind CSS 4.0.0
+
+Utility-first CSS framework with Vite plugin integration.
+
+**Why Tailwind?**
+- Rapid UI development with utility classes
+- Consistent design system
+- Automatic purging of unused CSS
+- Dark mode support
+- Responsive design utilities
+- Small production bundle size
+
+## Build & Development
+
+### Vite Plugins
+
+| Plugin | Version | Purpose |
+|--------|---------|----------|
+| `@vitejs/plugin-react` | 4.3.4 | React Fast Refresh and JSX support |
+| `@tailwindcss/vite` | 4.0.0 | Tailwind CSS integration |
+| `vite-plugin-pwa` | 1.2.0 | Progressive Web App support |
+
+### PWA Configuration
+
+The `vite-plugin-pwa` plugin enables:
+- Service Worker generation
+- Offline asset caching
+- Installable app experience
+- Background updates
+
+**Workbox settings:**
+- Caches JS, CSS, HTML, WASM, fonts
+- 10MB maximum file size
+- Runtime caching for Google Fonts
+- Manual update prompts (no automatic reload)
+
+## TypeScript Types
+
+Type definitions for external libraries:
+
+| Package | Purpose |
+|---------|----------|
+| `@types/react` (18.3.12) | React type definitions |
+| `@types/react-dom` (18.3.1) | React DOM type definitions |
+| `@types/three` (0.170.0) | Three.js type definitions |
+| `@types/uuid` (10.0.0) | UUID type definitions |
+
+## Dependencies Summary
+
+### Runtime Dependencies
+
+```json
+{
+  "react": "^18.3.1",
+  "react-dom": "^18.3.1",
+  "zustand": "^5.0.0",
+  "three": "^0.170.0",
+  "@types/three": "^0.170.0",
+  "manifold-3d": "^3.3.2",
+  "jszip": "^3.10.1",
+  "uuid": "^11.0.0"
+}
+```
+
+### Development Dependencies
+
+```json
+{
+  "typescript": "~5.6.2",
+  "vite": "^6.0.0",
+  "@vitejs/plugin-react": "^4.3.4",
+  "tailwindcss": "^4.0.0",
+  "@tailwindcss/vite": "^4.0.0",
+  "vite-plugin-pwa": "^1.2.0",
+  "@types/react": "^18.3.12",
+  "@types/react-dom": "^18.3.1",
+  "@types/uuid": "^10.0.0"
+}
+```
+
+## Architecture Decisions
+
+### Why Client-Side Only?
+
+- No server required = easier deployment
+- User data never leaves their device (privacy)
+- Works offline after first load
+- Reduced hosting costs
+- WASM enables near-native performance in the browser
+
+### Why Web Workers?
+
+- Keep UI responsive during heavy CSG operations
+- Prevent blocking the main thread
+- Enable background geometry generation
+- Better perceived performance
+
+### Why Manifold over other CSG libraries?
+
+- **vs OpenJSCAD**: Faster, guaranteed manifold output
+- **vs Three.js CSG**: More reliable, cleaner meshes
+- **vs server-side CAD**: No network latency, works offline
+
+## Performance Characteristics
+
+| Operation | Performance |
+|-----------|-------------|
+| 2D Grid Interaction | 60 FPS (SVG-based) |
+| Simple bin generation | ~50-100ms |
+| Complex bin (dividers + features) | ~200-500ms |
+| 3MF export (10 bins) | ~1-2 seconds |
+| Initial WASM load | ~500ms |
+
+All CSG operations run in a Web Worker to maintain 60 FPS UI responsiveness.

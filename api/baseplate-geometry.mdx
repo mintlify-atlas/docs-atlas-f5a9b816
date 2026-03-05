@@ -1,0 +1,250 @@
+---
+title: Baseplate Geometry
+description: Gridfinity baseplate generation with socket profiles
+---
+
+## Overview
+
+The baseplate geometry module generates Gridfinity-compatible baseplates with precision socket profiles. Baseplates provide a stable mounting surface for bins with optional magnet and screw attachment points.
+
+<Note>
+  **Implementation Status**: This module is currently a placeholder stub. Full baseplate geometry generation is planned for a future release.
+</Note>
+
+## Import
+
+```typescript
+// Planned API (not yet implemented)
+import { generateBaseplatePreview, generateBaseplateExport } from '@/gridfinity/baseplateGeometry';
+import type { ManifoldToplevel } from 'manifold-3d';
+```
+
+## Planned Features
+
+The baseplate module will provide:
+
+### Socket Profile
+
+Baseplates feature inverted socket geometry that bins nest into:
+
+- **Socket depth**: 4.75mm (matches bin base height)
+- **Socket profile**: 5-layer tapered walls for friction fit
+- **Corner radius**: 4.0mm (slightly larger than bin corners)
+- **Per-cell sockets**: Each grid cell has its own socket
+
+### Configuration Options
+
+```typescript
+// Planned interface
+interface BaseplateConfig {
+  cols: number;              // Grid columns
+  rows: number;              // Grid rows
+  cornerRadius: number;      // Socket corner radius (typically 4.0mm)
+  magnets?: boolean;         // Enable magnet recesses
+  screws?: boolean;          // Enable mounting screw holes
+  counterSink?: boolean;     // Countersink screw holes
+  baseThickness?: number;    // Baseplate thickness (typically 6.4mm)
+}
+```
+
+### Magnet Integration
+
+Baseplates can include magnet recesses that align with bin magnet holes:
+
+- **Position**: Four corners per cell, aligned with bin magnet holes
+- **Dimensions**: 6mm diameter × 2mm depth
+- **Inset**: 4.8mm from corner (matches bin magnet holes)
+- **Polarity marking**: Optional recesses for correct magnet orientation
+
+### Mounting Options
+
+**Screw Holes**
+
+- Through-holes for M3 screws at cell corners
+- Optional countersink for flat-head screws
+- Aligns with bin screw holes for permanent mounting
+
+**Adhesive Mounting**
+
+- Flat bottom surface for adhesive mounting
+- Optional anti-slip texture
+
+### Multi-Cell Baseplate
+
+For baseplates spanning multiple cells:
+
+- Individual socket profiles per cell
+- Continuous base surface connecting all cells
+- Optional perimeter wall for alignment
+
+## Geometry Specifications
+
+### Vertical Profile (Per Socket)
+
+The socket profile is the inverse of the bin base:
+
+```
+Top View (Z = 0, baseplate surface):
+  ┌─────────────────────┐
+  │   ┌───────────┐     │
+  │   │  Socket   │     │  Cell boundary: 42mm
+  │   │  Cavity   │     │  Socket inset: varies by layer
+  │   └───────────┘     │
+  └─────────────────────┘
+
+Side View (YZ plane):
+  ─────────────────────── Z = 0 (top surface)
+      │         │
+      │ Socket  │ Layer 1: 0.8mm depth, 4.4mm inset
+      ├─────────┤ Layer 2: chamfer to 2.8mm inset
+      │         │ Layer 3: straight section
+      ├─────────┤ Layer 4: chamfer to 1.2mm inset
+      │         │ Layer 5: narrow base
+  ────┴─────────┴──────── Z = -4.75mm (socket bottom)
+  ━━━━━━━━━━━━━━━━━━━━━━━ Base slab continues
+  ━━━━━━━━━━━━━━━━━━━━━━━ Z = -6.4mm (baseplate bottom)
+```
+
+### Dimensions
+
+- **Total baseplate height**: 6.4mm (GF.BASEPLATE_HEIGHT)
+- **Socket depth**: 4.75mm (GF.BASE_TOTAL_HEIGHT)
+- **Remaining base thickness**: 1.65mm (structural base below sockets)
+- **Socket corner radius**: 4.0mm (GF.BASE_CORNER_RADIUS)
+- **Per-cell size**: 42mm × 42mm (GF.CELL_SIZE)
+
+## Planned API
+
+### generateBaseplatePreview
+
+Generate simplified baseplate for viewport rendering.
+
+```typescript
+function generateBaseplatePreview(
+  wasm: ManifoldToplevel,
+  config: BaseplateConfig,
+): Manifold
+```
+
+**Simplified geometry:**
+- Single-depth socket cavities (no layered profile)
+- Fast boolean operations
+- Suitable for real-time 3D viewport
+
+### generateBaseplateExport
+
+Generate full-precision baseplate for 3D printing.
+
+```typescript
+function generateBaseplateExport(
+  wasm: ManifoldToplevel,
+  config: BaseplateConfig,
+): Manifold
+```
+
+**Full-precision geometry:**
+- 5-layer tapered socket profiles per cell
+- Exact inverse of bin base geometry
+- Optimized for 3D printing
+
+## Implementation Notes
+
+### Socket Profile Generation
+
+The socket profile will mirror the bin base Z-profile in reverse:
+
+```typescript
+// Bin base profile (upward from Z=0)
+const BIN_PROFILE = [
+  { zStart: 0.00, shrinkBot: 4.40, shrinkTop: 4.40 },
+  { zStart: 0.80, shrinkBot: 4.40, shrinkTop: 2.80 },
+  // ... layers 3, 4, 5
+];
+
+// Baseplate socket profile (downward from Z=0)
+const SOCKET_PROFILE = [
+  { zStart: 0.00, expandBot: 4.40, expandTop: 4.40 },
+  { zStart: -0.80, expandBot: 4.40, expandTop: 2.80 },
+  // ... inverted layers
+];
+```
+
+### Magnet Recess Positioning
+
+Magnet recesses align exactly with bin magnet holes:
+
+```typescript
+const halfCell = GF.CELL_SIZE / 2;
+const magnetInset = GF.MAGNET_INSET;
+
+// Four corners per cell
+const magnetPositions = [
+  [offsetX - halfCell + magnetInset, offsetY - halfCell + magnetInset],
+  [offsetX + halfCell - magnetInset, offsetY - halfCell + magnetInset],
+  [offsetX - halfCell + magnetInset, offsetY + halfCell - magnetInset],
+  [offsetX + halfCell - magnetInset, offsetY + halfCell - magnetInset],
+];
+```
+
+### Tolerance Considerations
+
+- **Socket dimensions**: Cell size minus tolerance (41.5mm per cell)
+- **Corner radius**: Slightly larger than bin corners for clearance
+- **Magnet holes**: Add 0.3mm clearance for press-fit magnets
+- **Screw holes**: 3.2mm clearance holes (vs 3.0mm screw diameter)
+
+## Usage Example (Planned)
+
+```typescript
+import wasm from 'manifold-3d';
+import { generateBaseplateExport } from '@/gridfinity/baseplateGeometry';
+import { GF } from '@/gridfinity/constants';
+
+const manifold = await wasm();
+
+const baseplateGeometry = generateBaseplateExport(manifold, {
+  cols: 6,
+  rows: 6,
+  cornerRadius: GF.BASE_CORNER_RADIUS,
+  magnets: true,
+  screws: true,
+  counterSink: true,
+  baseThickness: GF.BASEPLATE_HEIGHT,
+});
+
+// Export to 3MF
+const mesh = manifoldToTriangleMesh(baseplateGeometry);
+const blob = await exportTo3MF([{ mesh, name: 'Baseplate 6x6' }]);
+```
+
+## Related Constants
+
+From `gridfinity/constants.ts`:
+
+```typescript
+GF.CELL_SIZE = 42;           // mm per grid cell
+GF.BASEPLATE_HEIGHT = 6.4;   // mm total baseplate height
+GF.BASE_TOTAL_HEIGHT = 4.75; // mm socket depth
+GF.BASE_CORNER_RADIUS = 4.0; // mm socket corner radius
+GF.TOLERANCE = 0.5;          // mm fit clearance
+```
+
+## Future Enhancements
+
+- **Weighted baseplate**: Increased base thickness for stability
+- **Anti-slip texture**: Bottom surface texturing
+- **Mounting flanges**: Side mounting holes for wall attachment
+- **Cable routing**: Channels between cells for cable management
+- **Modular connection**: Interlocking tabs for joining multiple baseplates
+
+## Current File Status
+
+Source: src/gridfinity/baseplateGeometry.ts:1-4
+
+```typescript
+// Phase 2: Manifold CSG baseplate geometry generation
+
+export {};
+```
+
+The file currently exports an empty object as a placeholder. Implementation is planned for Phase 2 of development.

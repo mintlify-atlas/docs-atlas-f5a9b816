@@ -1,0 +1,190 @@
+---
+title: Gridfinity Presets
+description: Pre-configured grid sizes and bin templates for common use cases
+---
+
+## Overview
+
+Gridfinity Builder includes preset configurations for popular 3D printers and common bin types. These presets provide quick starting points for designing storage layouts.
+
+## Grid Presets
+
+Grid presets define baseplate sizes for different 3D printer build volumes.
+
+| Preset Name | Grid Size | Real Size (mm) | Build Volume |
+|-------------|-----------|----------------|---------------|
+| A1 | 6 × 6 | 252 × 252 | Bambu Lab A1 (256×256mm) |
+| A1 Mini | 4 × 4 | 168 × 168 | Bambu Lab A1 Mini (180×180mm) |
+| P1S | 6 × 6 | 252 × 252 | Bambu Lab P1S (256×256mm) |
+| X1C | 6 × 6 | 252 × 252 | Bambu Lab X1C (256×256mm) |
+| X1E | 6 × 6 | 252 × 252 | Bambu Lab X1E (256×256mm) |
+| H2D | 6 × 6 | 252 × 252 | Bambu Lab H2D (256×256mm) |
+| 19" Rack | 10 × 8 | 420 × 336 | Server rack tray organizer |
+| Custom | 8 × 8 | 336 × 336 | User-defined grid size |
+
+### Grid Size Calculation
+
+```typescript
+realWidth = gridCols × 42mm
+realDepth = gridRows × 42mm
+```
+
+For example, a 6×6 grid:
+- Width: 6 × 42mm = 252mm
+- Depth: 6 × 42mm = 252mm
+
+<Note>
+  Grid presets are optimized to fit within printer build volumes with some margin for brim/skirt. The "A1" preset is marked as the default.
+</Note>
+
+Source reference: `src/gridfinity/constants.ts:31-40`
+
+## Bin Presets
+
+Pre-configured bin templates for common storage needs.
+
+| Name | Size (W×D×H) | Features | Use Case |
+|------|--------------|----------|----------|
+| Small Parts | 1×1×3u | Stacking lip | Small screws, resistors, LEDs |
+| Screwdriver | 1×4×6u | None | Tall narrow bins for screwdrivers |
+| Socket Tray | 2×2×2u | 3×3 dividers | Organized socket storage |
+| Deep Bin | 2×2×6u | Stacking lip, label shelf | Deep storage with labeling |
+| Wide Shallow | 3×2×2u | Stacking lip | Wide parts, cable coils |
+| SFP Tray | 2×1×2u | 5 X-dividers | Network SFP modules (vertical slots) |
+| Cable Mgmt | 1×6×3u | None | Long narrow bin for cable runs |
+
+### Preset Details
+
+#### Small Parts (1×1×3u)
+- **Dimensions:** 41.5 × 41.5 × 21mm (+ 4.75mm base = 25.75mm total)
+- **Features:** Stacking lip enabled
+- **Best for:** Resistors, capacitors, small screws, beads
+
+#### Screwdriver (1×4×6u)
+- **Dimensions:** 41.5 × 167.5 × 42mm (+ 4.75mm base = 46.75mm total)
+- **Features:** None (maximize internal space)
+- **Best for:** Screwdrivers, pens, long tools
+
+#### Socket Tray (2×2×2u)
+- **Dimensions:** 83.5 × 83.5 × 14mm (+ 4.75mm base = 18.75mm total)
+- **Features:** 3×3 interior dividers (16 compartments)
+- **Best for:** Socket wrenches, drill bits, organized small tools
+
+#### Deep Bin (2×2×6u)
+- **Dimensions:** 83.5 × 83.5 × 42mm (+ 4.75mm base = 46.75mm total)
+- **Features:** Stacking lip, label shelf (12mm)
+- **Best for:** General purpose deep storage with labeling
+
+#### Wide Shallow (3×2×2u)
+- **Dimensions:** 125.5 × 83.5 × 14mm (+ 4.75mm base = 18.75mm total)
+- **Features:** Stacking lip
+- **Best for:** Wide parts, cable coils, flat items
+
+#### SFP Tray (2×1×2u)
+- **Dimensions:** 83.5 × 41.5 × 14mm (+ 4.75mm base = 18.75mm total)
+- **Features:** 5 X-dividers (6 vertical slots)
+- **Best for:** Network SFP modules, SD cards, USB drives (vertical storage)
+
+#### Cable Mgmt (1×6×3u)
+- **Dimensions:** 41.5 × 251.5 × 21mm (+ 4.75mm base = 25.75mm total)
+- **Features:** None
+- **Best for:** Long cable runs, zip tie storage, wire management
+
+Source reference: `src/gridfinity/constants.ts:42-50`
+
+## Bin Groups
+
+Optional color-coded categorization for organizing bins:
+
+| Group ID | Label | Color |
+|----------|-------|-------|
+| screws | Screws | Blue (#4488ff) |
+| tools | Tools | Red (#ff6644) |
+| cables | Cables | Orange (#ffaa00) |
+| electronics | Electronics | Purple (#aa44ff) |
+| parts | Parts | Teal (#00d4aa) |
+| office | Office | Pink (#ff44aa) |
+| network | Network | Cyan (#44ddff) |
+
+Groups help visually organize bins in the grid and appear in the bill of materials.
+
+Source reference: `src/gridfinity/constants.ts:54-63`
+
+## Layout Templates
+
+Complete pre-designed layouts for common workspace scenarios.
+
+### IKEA Alex Drawer (7×14 grid)
+
+**Description:** Optimized for IKEA ALEX desk drawer organizer
+
+**Bins included:**
+- 2×2×3u: Pens (office)
+- 2×2×3u: Clips with 2×2 dividers (office)
+- 3×2×3u: Notes (office)
+- 1×1×3u: USB cables
+- 1×1×3u: SD Cards (electronics)
+- 5×3×3u: Notebooks (office)
+- 2×4×3u: Cables
+- 5×2×3u: Misc with 3 X-dividers (parts)
+
+### Electronics Bench (6×6 grid)
+
+**Description:** Electronics workspace organizer
+
+**Bins included:**
+- 4× 1×1×3u: Resistors, Capacitors, LEDs, ICs
+- 2×2×3u: Arduino modules
+- 2×2×6u: Soldering tools
+- 2×1×2u: Connectors with 3 X-dividers
+- 3×3×2u: Wire spools with 2×2 dividers
+- 1×3×6u: Screwdrivers
+- 2×2×3u: Multimeter
+- 2×2×2u: Tape & Glue with 1 X-divider
+
+### Tool Wall (8×4 grid)
+
+**Description:** Workshop tool organizer
+
+**Bins included:**
+- 2×2×6u: Drill bits with 3 X-dividers
+- 2× 1×4×6u: Screwdrivers, Allen keys
+- 2× 2×2×3u: M3 screws, M5 screws (with 1×1 dividers)
+- 2×2×3u: Nuts & bolts with 2×2 dividers
+- 2×2×3u: Washers with 1×1 dividers
+- 2×2×2u: Zip ties
+
+### Server Rack 1U (10×8 grid)
+
+**Description:** 19" rack tray organizer for network equipment
+
+**Bins included:**
+- 2× 2×1×2u: SFP modules with 5 X-dividers
+- 2×2×3u: RJ45 plugs with 2×2 dividers
+- 2×2×3u: Keystones with 1×1 dividers
+- 2×4×6u: Patch cables
+- 4×3×2u: SSDs 2.5" with 3×2 dividers
+- 4×2×3u: Drive caddies with 3 X-dividers
+- 2× 2×2×3u: M5 cage nuts, M6 bolts (with 1×1 dividers)
+- 2×2×2u: USB dongles with 3 X-dividers
+- 2×2×2u: Labels
+- 3×2×2u: Velcro straps
+- 3×2×2u: Cable ties
+- 4×2×3u: Misc tools with 2 X-dividers
+
+Source reference: `src/gridfinity/constants.ts:67-145`
+
+## Using Presets
+
+Presets provide quick starting points:
+
+1. **Grid presets** — Select a printer preset to set baseplate size
+2. **Bin presets** — Add pre-configured bins to your layout
+3. **Layout templates** — Load complete workspace templates
+4. **Customize** — Modify any preset to fit your specific needs
+
+All presets use the same underlying bin configuration system, so you can adjust dimensions, features, and parameters after adding them to your layout.
+
+<Note>
+  Layout templates demonstrate best practices for organizing different workspace types and serve as starting points for custom designs.
+</Note>

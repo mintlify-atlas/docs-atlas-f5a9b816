@@ -1,0 +1,495 @@
+---
+title: Store (Zustand State)
+description: Global state management for bins, grid, and UI using Zustand
+---
+
+## Overview
+
+The store module provides centralized state management using [Zustand](https://github.com/pmndrs/zustand). It manages bins, grid configuration, view modes, selection state, drag interactions, and undo/redo history.
+
+## Import
+
+```typescript
+import { useStore, type Bin, type ViewMode, type RenderMode } from '@/store/useStore';
+```
+
+## Types
+
+### Bin
+
+Represents a single Gridfinity bin with all its properties.
+
+```typescript
+interface Bin {
+  id: string;              // Unique identifier (UUID)
+  x: number;               // Grid position X (0-based column)
+  y: number;               // Grid position Y (0-based row)
+  w: number;               // Width in grid units
+  d: number;               // Depth in grid units
+  h: number;               // Height in grid units
+  cornerRadius: number;    // Corner radius in mm
+  wallThickness: number;   // Wall thickness in mm
+  bottomThickness: number; // Bottom thickness in mm
+  stackingLip: boolean;    // Enable stacking lip feature
+  labelShelf: boolean;     // Enable 45° label shelf
+  labelWidth: number;      // Label shelf width in mm
+  magnets: boolean;        // Enable magnet holes
+  screws: boolean;         // Enable screw holes
+  dividersX: number;       // Number of X-axis dividers
+  dividersY: number;       // Number of Y-axis dividers
+  color: string;           // Hex color code
+  label: string;           // User-defined label
+  group: string;           // Bin group/category ID
+}
+```
+
+<ResponseField name="id" type="string" required>
+  UUID generated automatically on creation
+</ResponseField>
+
+<ResponseField name="x" type="number" required>
+  Grid column position (0-indexed)
+</ResponseField>
+
+<ResponseField name="y" type="number" required>
+  Grid row position (0-indexed)
+</ResponseField>
+
+<ResponseField name="w" type="number" required>
+  Width in grid units (1 unit = 42mm)
+</ResponseField>
+
+<ResponseField name="d" type="number" required>
+  Depth in grid units (1 unit = 42mm)
+</ResponseField>
+
+<ResponseField name="h" type="number" required>
+  Height in grid units (1 unit = 7mm)
+</ResponseField>
+
+### ViewMode
+
+```typescript
+type ViewMode = '2d' | '3d' | 'split';
+```
+
+Controls the viewport layout.
+
+### RenderMode
+
+```typescript
+type RenderMode = 'standard' | 'technical' | 'blueprint';
+```
+
+Controls the 3D rendering style.
+
+### DragState
+
+Tracks drag-and-drop interactions for placing and moving bins.
+
+```typescript
+interface DragState {
+  mode: 'idle' | 'placing' | 'dragging';
+  binId: string | null;                      // ID of bin being dragged
+  origin: { col: number; row: number } | null; // Drag start position
+  ghost: { col: number; row: number } | null;  // Ghost preview position
+  ghostValid: boolean;                         // Whether ghost position is valid
+  placingConfig: Omit<Bin, 'id' | 'x' | 'y'> | null; // Config for new bin placement
+}
+```
+
+## State Properties
+
+### Grid Configuration
+
+<ResponseField name="gridCols" type="number" default="6">
+  Number of grid columns
+</ResponseField>
+
+<ResponseField name="gridRows" type="number" default="6">
+  Number of grid rows
+</ResponseField>
+
+### Bin Management
+
+<ResponseField name="bins" type="Bin[]" default="[]">
+  Array of all bins in the grid
+</ResponseField>
+
+<ResponseField name="selectedBinId" type="string | null" default="null">
+  ID of the primary selected bin
+</ResponseField>
+
+<ResponseField name="selectedBinIds" type="string[]" default="[]">
+  Array of all selected bin IDs (supports multi-select)
+</ResponseField>
+
+### View Settings
+
+<ResponseField name="viewMode" type="ViewMode" default="'split'">
+  Current viewport layout mode
+</ResponseField>
+
+<ResponseField name="renderMode" type="RenderMode" default="'standard'">
+  Current 3D rendering style
+</ResponseField>
+
+<ResponseField name="showBaseplate" type="boolean" default="true">
+  Whether to render the baseplate
+</ResponseField>
+
+<ResponseField name="showDimensions" type="boolean" default="false">
+  Whether to show dimension annotations
+</ResponseField>
+
+<ResponseField name="sectionView" type="boolean" default="false">
+  Whether to enable section view (cut-through)
+</ResponseField>
+
+### Interaction State
+
+<ResponseField name="dragState" type="DragState">
+  Current drag-and-drop state
+</ResponseField>
+
+### History
+
+<ResponseField name="history" type="Bin[][]" default="[[]]">
+  Undo/redo history stack of bin states
+</ResponseField>
+
+<ResponseField name="historyIndex" type="number" default="0">
+  Current position in history stack
+</ResponseField>
+
+## Actions
+
+### addBin
+
+Adds a new bin to the grid.
+
+```typescript
+addBin(bin: Omit<Bin, 'id'>): void
+```
+
+<ParamField path="bin" type="Omit<Bin, 'id'>" required>
+  Bin configuration without ID (generated automatically)
+</ParamField>
+
+**Example:**
+
+```typescript
+const { addBin } = useStore();
+
+addBin({
+  x: 0,
+  y: 0,
+  w: 2,
+  d: 2,
+  h: 3,
+  cornerRadius: 3.75,
+  wallThickness: 1.2,
+  bottomThickness: 0.8,
+  stackingLip: true,
+  labelShelf: false,
+  labelWidth: 12,
+  magnets: false,
+  screws: false,
+  dividersX: 0,
+  dividersY: 0,
+  color: '#00d4aa',
+  label: 'Small Parts',
+  group: 'parts',
+});
+```
+
+Source: src/store/useStore.ts:112-121
+
+### removeBin
+
+Removes a bin by ID.
+
+```typescript
+removeBin(id: string): void
+```
+
+<ParamField path="id" type="string" required>
+  ID of the bin to remove
+</ParamField>
+
+Source: src/store/useStore.ts:123-133
+
+### updateBin
+
+Updates properties of an existing bin.
+
+```typescript
+updateBin(id: string, updates: Partial<Bin>): void
+```
+
+<ParamField path="id" type="string" required>
+  ID of the bin to update
+</ParamField>
+
+<ParamField path="updates" type="Partial<Bin>" required>
+  Properties to update (partial update)
+</ParamField>
+
+**Example:**
+
+```typescript
+const { updateBin } = useStore();
+
+updateBin('bin-id', {
+  h: 6,
+  labelShelf: true,
+  dividersX: 2,
+});
+```
+
+Source: src/store/useStore.ts:135-139
+
+### moveBin
+
+Moves a bin to a new grid position.
+
+```typescript
+moveBin(id: string, x: number, y: number): void
+```
+
+<ParamField path="id" type="string" required>
+  ID of the bin to move
+</ParamField>
+
+<ParamField path="x" type="number" required>
+  New X grid position
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  New Y grid position
+</ParamField>
+
+Source: src/store/useStore.ts:141-145
+
+### selectBin
+
+Selects a bin, with optional multi-select support.
+
+```typescript
+selectBin(id: string | null, multi?: boolean): void
+```
+
+<ParamField path="id" type="string | null" required>
+  ID of bin to select, or null to clear selection
+</ParamField>
+
+<ParamField path="multi" type="boolean" default="false">
+  Whether to add to selection (multi-select mode)
+</ParamField>
+
+**Behavior:**
+- If `id` is `null`, clears all selections
+- If `multi` is `false`, replaces current selection
+- If `multi` is `true`, toggles the bin in the selection set
+
+Source: src/store/useStore.ts:147-160
+
+### setGridSize
+
+Updates the grid dimensions.
+
+```typescript
+setGridSize(cols: number, rows: number): void
+```
+
+<ParamField path="cols" type="number" required>
+  Number of columns
+</ParamField>
+
+<ParamField path="rows" type="number" required>
+  Number of rows
+</ParamField>
+
+Source: src/store/useStore.ts:162
+
+### setViewMode
+
+Changes the viewport layout.
+
+```typescript
+setViewMode(mode: ViewMode): void
+```
+
+<ParamField path="mode" type="ViewMode" required>
+  New view mode: '2d', '3d', or 'split'
+</ParamField>
+
+Source: src/store/useStore.ts:164
+
+### setRenderMode
+
+Changes the 3D rendering style.
+
+```typescript
+setRenderMode(mode: RenderMode): void
+```
+
+<ParamField path="mode" type="RenderMode" required>
+  New render mode: 'standard', 'technical', or 'blueprint'
+</ParamField>
+
+Source: src/store/useStore.ts:166
+
+### setShowDimensions
+
+Toggles dimension annotations.
+
+```typescript
+setShowDimensions(on: boolean): void
+```
+
+<ParamField path="on" type="boolean" required>
+  Whether to show dimensions
+</ParamField>
+
+Source: src/store/useStore.ts:168
+
+### setSectionView
+
+Toggles section view (cut-through).
+
+```typescript
+setSectionView(on: boolean): void
+```
+
+<ParamField path="on" type="boolean" required>
+  Whether to enable section view
+</ParamField>
+
+Source: src/store/useStore.ts:170
+
+### clearAll
+
+Removes all bins and clears selection.
+
+```typescript
+clearAll(): void
+```
+
+Source: src/store/useStore.ts:172-175
+
+### setDragState
+
+Updates the drag state (used internally by drag handlers).
+
+```typescript
+setDragState(state: Partial<DragState>): void
+```
+
+<ParamField path="state" type="Partial<DragState>" required>
+  Partial drag state to merge
+</ParamField>
+
+Source: src/store/useStore.ts:177-179
+
+### startPlacing
+
+Enters bin placement mode with a configuration template.
+
+```typescript
+startPlacing(config: Omit<Bin, 'id' | 'x' | 'y'>): void
+```
+
+<ParamField path="config" type="Omit<Bin, 'id' | 'x' | 'y'>" required>
+  Bin configuration for placement (position determined by user click)
+</ParamField>
+
+Source: src/store/useStore.ts:181-190
+
+### cancelPlacing
+
+Exits placement mode without creating a bin.
+
+```typescript
+cancelPlacing(): void
+```
+
+Source: src/store/useStore.ts:192
+
+### undo
+
+Reverts to the previous state in history.
+
+```typescript
+undo(): void
+```
+
+Source: src/store/useStore.ts:194-201
+
+### redo
+
+Reapplies the next state in history.
+
+```typescript
+redo(): void
+```
+
+Source: src/store/useStore.ts:203-210
+
+## Usage Example
+
+```typescript
+import { useStore } from '@/store/useStore';
+
+function BinEditor() {
+  const bins = useStore((state) => state.bins);
+  const addBin = useStore((state) => state.addBin);
+  const updateBin = useStore((state) => state.updateBin);
+  const selectedBinId = useStore((state) => state.selectedBinId);
+
+  const handleAddBin = () => {
+    addBin({
+      x: 0, y: 0, w: 1, d: 1, h: 3,
+      cornerRadius: 3.75,
+      wallThickness: 1.2,
+      bottomThickness: 0.8,
+      stackingLip: true,
+      labelShelf: false,
+      labelWidth: 12,
+      magnets: false,
+      screws: false,
+      dividersX: 0,
+      dividersY: 0,
+      color: '#00d4aa',
+      label: 'New Bin',
+      group: '',
+    });
+  };
+
+  const handleUpdateHeight = (id: string, newHeight: number) => {
+    updateBin(id, { h: newHeight });
+  };
+
+  return (
+    <div>
+      <button onClick={handleAddBin}>Add Bin</button>
+      {bins.map(bin => (
+        <div key={bin.id}>
+          {bin.label} - {bin.w}x{bin.d}x{bin.h}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## History Management
+
+The store automatically tracks bin changes for undo/redo:
+
+- **Recorded operations:** `addBin`, `removeBin`, `updateBin`, `moveBin`, `clearAll`
+- **History stack:** Maintains a snapshot of `bins` array after each operation
+- **Max history:** Limited only by browser memory
+- **Implementation:** Uses deep cloning via `JSON.parse(JSON.stringify())`
+
+Source: src/store/useStore.ts:87-91

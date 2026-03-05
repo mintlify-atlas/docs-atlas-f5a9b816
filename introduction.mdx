@@ -1,0 +1,93 @@
+---
+title: Introduction
+description: Browser-based parametric CAD tool for designing, previewing, and exporting 3D-printable Gridfinity storage layouts
+---
+
+<div style={{
+  background: 'linear-gradient(135deg, #fc0404 0%, #fc7c7c 100%)',
+  borderRadius: '8px',
+  padding: '48px 32px',
+  marginBottom: '32px',
+  color: 'white'
+}}>
+  <h1 style={{ fontSize: '36px', fontWeight: '700', marginBottom: '16px', color: 'white' }}>
+    Gridfinity Builder
+  </h1>
+  <p style={{ fontSize: '18px', opacity: 0.95, maxWidth: '600px' }}>
+    Design custom Gridfinity storage layouts in your browser. Preview in real-time 3D and export ready-to-print 3MF files for your 3D printer.
+  </p>
+</div>
+
+## What is Gridfinity Builder?
+
+Gridfinity Builder is a browser-based parametric CAD tool that lets you design, preview, and export 3D-printable Gridfinity storage layouts. Built for makers, 3D printing enthusiasts, and anyone who wants to organize their workspace with the [Gridfinity modular storage system](https://gridfinity.xyz).
+
+<Note>
+Gridfinity is an open-source modular storage system created by [Zack Freedman](https://www.youtube.com/@ZackFreedman). This tool helps you design custom bin layouts and export them as 3MF files ready for slicing.
+</Note>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Interactive 2D Grid" icon="grid" href="/features/2d-grid">
+    Drag, resize, and rotate bins with real-time collision detection and snap-to-grid behavior
+  </Card>
+  <Card title="Real-Time 3D Preview" icon="cube" href="/features/3d-preview">
+    See your designs rendered in 3D with multiple render modes: Solid, X-Ray, and Blueprint
+  </Card>
+  <Card title="Accurate Geometry" icon="ruler" href="/gridfinity/specification">
+    All bins follow the official Gridfinity specification with precise dimensions
+  </Card>
+  <Card title="3MF Export" icon="file-export" href="/features/export-3mf">
+    Export designs directly to PrusaSlicer, Cura, or Bambu Studio
+  </Card>
+  <Card title="Auto-Fill Tools" icon="wand-magic-sparkles" href="/features/auto-fill">
+    Automatically fill empty space and optimize your layout
+  </Card>
+  <Card title="Progressive Web App" icon="mobile" href="/installation">
+    Install on any device and work offline
+  </Card>
+</CardGroup>
+
+## Why Gridfinity Builder?
+
+<Steps>
+  <Step title="Design faster">
+    Interactive 2D grid with drag-and-drop placement, resize handles, and rotation controls. No CAD experience required.
+  </Step>
+  <Step title="Preview accurately">
+    Real-time 3D rendering powered by Three.js and Manifold CSG engine. See exactly what you'll print.
+  </Step>
+  <Step title="Print immediately">
+    Export watertight, manifold 3MF files that open directly in your slicer. No cleanup required.
+  </Step>
+</Steps>
+
+## Supported Printers
+
+Gridfinity Builder includes presets for popular 3D printers:
+
+- **Bambu Lab**: A1, A1 Mini, P1S, X1C, X1E, H2D (6×6 grid, 252×252mm)
+- **19" Server Rack**: 10×8 grid (420×336mm)
+- **Custom**: Any size baseplate
+
+All exported files work with any FDM 3D printer and slicer software.
+
+## Live Demo
+
+Try Gridfinity Builder now: [https://gridfinity.securedev.codes/](https://gridfinity.securedev.codes/)
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Start designing your first layout in minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Run locally or install as a Progressive Web App
+  </Card>
+</CardGroup>
+
+## Open Source
+
+Gridfinity Builder is open source. Contribute on [GitHub](https://github.com/tunelko/gridfinity-BambuLab-3D).

@@ -1,0 +1,286 @@
+---
+title: 'Bin Configurator'
+description: 'Detailed parameter editor for precise control over bin dimensions, geometry, features, and appearance'
+icon: 'sliders'
+---
+
+The Bin Configurator provides precise control over every aspect of a bin's design, from dimensions to wall thickness to optional features like dividers and magnet holes.
+
+## Overview
+
+When a bin is selected in the 2D grid or 3D preview, the configurator panel displays all editable parameters. Changes update the 3D preview in real-time via the Web Worker geometry pipeline.
+
+## Dimensions Section
+
+### Grid Units (W × D × H)
+
+Set bin size in Gridfinity grid units:
+
+<CardGroup cols={3}>
+  <Card title="Width (W)" icon="arrows-left-right">
+    - Range: 1-10 cells
+    - Horizontal span on grid
+    - 1 cell = 42mm
+  </Card>
+  <Card title="Depth (D)" icon="arrows-up-down">
+    - Range: 1-10 cells
+    - Vertical span on grid
+    - 1 cell = 42mm
+  </Card>
+  <Card title="Height (H)" icon="up-down">
+    - Range: 1-12 units
+    - 1 unit = 7mm interior height
+    - +4.75mm base adds to total
+  </Card>
+</CardGroup>
+
+### Real-World Measurements
+
+Displayed below dimension inputs:
+
+```
+83.5 x 125.5 x 32.75mm
+```
+
+- **Width/Depth**: `(cells × 42mm) - 0.5mm tolerance`
+- **Height**: `(units × 7mm) + 4.75mm base`
+- Updates automatically when dimensions change
+
+### Rotate W/D Button
+
+Quickly swap width and depth:
+
+- One-click rotation (same as `R` key)
+- Validates collision before applying
+- Useful for repurposing bin designs
+
+<Tip>
+  Use **Rotate W/D** to try horizontal vs. vertical orientations without recreating the bin.
+</Tip>
+
+## Geometry Section
+
+### Corner Radius
+
+Smooth rounded edges on bin exterior:
+
+- **Range**: 0mm (sharp) to 3.75mm (standard Gridfinity)
+- **Slider control** with debounced updates (100ms)
+- **Default**: 3.75mm per Gridfinity spec
+- Affects outer profile only (interior stays sharp)
+
+<Note>
+  Sharp corners (0mm radius) are printable but may be fragile. The standard 3.75mm radius is recommended.
+</Note>
+
+### Wall Thickness
+
+Perimeter shell thickness:
+
+- **Range**: 0.4mm (single wall) to 3mm (reinforced)
+- **Default**: 1.2mm (3 perimeters at 0.4mm line width)
+- **Increment**: 0.1mm steps
+- Number input with blur validation
+
+### Bottom Thickness
+
+Floor layer thickness:
+
+- **Range**: 0.4mm to 3mm
+- **Default**: 0.8mm (2 bottom layers)
+- **Increment**: 0.1mm steps
+- Independent from wall thickness
+
+<Warning>
+  Walls thinner than 1.0mm may not hold heavy items. Bottoms thinner than 0.8mm may sag under weight.
+</Warning>
+
+## Features Section
+
+### Label Shelf
+
+Angled shelf for paper or printed labels:
+
+- **Toggle**: On/Off
+- **Width**: 5mm to 30mm (when enabled)
+- **Default width**: 12mm per Gridfinity spec
+- **Angle**: 45° chamfer
+- Located at front edge of bin
+
+<Accordion title="Label Shelf Geometry">
+  The label shelf is a 45° angled cutout at the front top edge of the bin. It's designed to hold paper labels or accept printed-on labels. The shelf width determines how far down the front wall the chamfer extends.
+</Accordion>
+
+### Magnet Holes
+
+Neodymium magnet mounting points:
+
+- **Toggle**: On/Off
+- **Diameter**: 6mm (standard N52 6×3mm magnets)
+- **Depth**: 2mm from baseplate bottom
+- **Count**: 4 per cell unit (grid-aligned)
+- Positioned in base for baseplate attachment
+
+<Tip>
+  Enable magnet holes if you use a magnetic baseplate. Magnet holes are subtracted during CSG generation.
+</Tip>
+
+### Screw Holes (M3)
+
+Threaded fastener mounting points:
+
+- **Toggle**: On/Off
+- **Diameter**: 3.2mm (M3 clearance fit)
+- **Count**: 4 per cell unit (grid-aligned)
+- Alternative to magnets for permanent installation
+- Through-holes from base bottom
+
+<Note>
+  Screw holes and magnet holes can be enabled simultaneously, but they occupy the same positions. Choose one or the other based on your mounting method.
+</Note>
+
+## Dividers Section
+
+Interior compartmentalization:
+
+### X Dividers (Vertical)
+
+- **Range**: 0-9 dividers
+- Evenly spaced wall-to-wall
+- Number input with +/− buttons
+- Full-height dividers matching bin walls
+
+### Y Dividers (Horizontal)
+
+- **Range**: 0-9 dividers
+- Evenly spaced wall-to-wall  
+- Number input with +/− buttons
+- Full-height dividers matching bin walls
+
+<Tip>
+  **Divider spacing**: With N dividers, you get N+1 compartments. For example, 3 X-dividers create 4 vertical slots.
+</Tip>
+
+<Accordion title="Divider Example">
+  A 2×2×3u bin with:
+  - 3 X-dividers = 4 vertical compartments
+  - 1 Y-divider = 2 horizontal rows
+  - **Total**: 8 individual compartments (4×2)
+</Accordion>
+
+## Color Section
+
+Visual identification in 2D and 3D:
+
+- **Palette**: 6 preset colors
+  - `#00d4aa` Teal (default/accent)
+  - `#4488ff` Blue
+  - `#ff6644` Red/Orange
+  - `#ffaa00` Amber
+  - `#aa44ff` Purple
+  - `#ff44aa` Pink
+- Click any swatch to apply
+- Selected color shows white border + scale animation
+- Color affects 2D bin fill and 3D material tint
+
+## Group Section
+
+Organize bins by function or location:
+
+- **Preset groups**: Tools, Electronics, Hardware, Consumables, etc.
+- Each group has a color indicator dot
+- Active group highlighted with color-coded border
+- Group dots visible on 2D grid (top-left of bin)
+- Useful for generating filtered Bill of Materials
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench">
+    Wrenches, screwdrivers, pliers
+  </Card>
+  <Card title="Electronics" icon="microchip">
+    ICs, resistors, LEDs, modules
+  </Card>
+  <Card title="Hardware" icon="bolt">
+    Screws, nuts, washers, standoffs
+  </Card>
+  <Card title="Consumables" icon="fire">
+    Solder, flux, adhesives, tape
+  </Card>
+</CardGroup>
+
+## Label Section
+
+Custom text identifier:
+
+- **Text input**: Any string (e.g., "M3 Screws", "USB-C Cables")
+- Displayed on 2D grid (centered in bin)
+- Included in BOM and print labels
+- Defaults to grid dimensions (e.g., "2x3") if empty
+
+## Real-Time Updates
+
+All changes trigger immediate updates:
+
+1. **User edits parameter** in configurator
+2. **Zustand store updates** bin object
+3. **2D grid re-renders** with new dimensions/color
+4. **Web Worker receives** new bin config
+5. **Manifold CSG regenerates** geometry
+6. **3D preview updates** with new mesh (1-2s delay for complex bins)
+
+<Warning>
+  Rapid parameter changes (e.g., sliding corner radius) are debounced (100ms) to prevent overwhelming the Web Worker.
+</Warning>
+
+## Input Validation
+
+All numeric inputs enforce constraints:
+
+- **onBlur clamping**: Values outside range reset to nearest valid value
+- **Min/max enforcement**: Cannot exceed specified bounds
+- **Step increments**: Match sensible precision (0.1mm, 1 unit, etc.)
+- Visual feedback when clamped
+
+## Tips & Best Practices
+
+<Tip>
+  **Standard Gridfinity**: 3.75mm corner radius, 1.2mm walls, 0.8mm bottom, no magnet/screw holes.
+</Tip>
+
+<Tip>
+  **Heavy-duty bins**: Increase wall thickness to 2.0mm and bottom to 1.6mm for tools or metal hardware.
+</Tip>
+
+<Tip>
+  **Space-efficient dividers**: Use 1-2 dividers per axis for most applications. More than 5 creates very narrow slots.
+</Tip>
+
+<Note>
+  Label text supports any Unicode characters, including emojis (though not recommended for 3D printing compatibility).
+</Note>
+
+## Keyboard Accessibility
+
+- All inputs keyboard-navigable (Tab key)
+- Number inputs accept arrow up/down for increments
+- Enter key commits changes
+- Escape key cancels editing (reverts to last value)
+
+## Technical Implementation
+
+- **Component**: `BinConfigurator.tsx`
+- **State management**: Zustand `useStore` hook
+- **Update strategy**: Partial bin updates (only changed fields)
+- **Re-render optimization**: `memo()` wrapper prevents unnecessary renders
+- **Slider debouncing**: 100ms delay using `useRef` timer
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="2D Grid Canvas" icon="grid-2" href="/features/2d-grid">
+    Position and arrange bins
+  </Card>
+  <Card title="3D Preview" icon="cube" href="/features/3d-preview">
+    See geometry changes in real-time
+  </Card>
+</CardGroup>

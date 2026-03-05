@@ -1,80 +1,138 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with Gridfinity Builder in 5 minutes
 ---
 
-## Get started in three steps
+## Access the Live Demo
 
-Get your documentation site running locally and make your first customization.
+Gridfinity Builder runs entirely in your browser - no installation required to get started.
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Open the live demo">
+    Navigate to [https://gridfinity.securedev.codes/](https://gridfinity.securedev.codes/) in any modern browser (Chrome, Edge, Firefox, or Safari).
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    The app loads with a default 6x6 grid preset (Bambu Lab A1) and an empty baseplate.
+  </Step>
+
+  <Step title="Choose a baseplate preset">
+    In the left sidebar under **Printer & Baseplate Presets**, select your 3D printer:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    - **Bambu Lab A1**: 6x6 grid (252 x 252 mm)
+    - **Bambu Lab A1 Mini**: 4x4 grid (168 x 168 mm)
+    - **19" Server Rack**: 10x8 grid (420 x 336 mm)
+    - **Custom**: Define any grid size
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <Note>
+    Each grid cell is 42x42mm according to the official Gridfinity specification.
+    </Note>
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Add your first bin">
+    Under **Bin Presets**, click one of the quick-start options:
+    
+    - **Small Parts** (1x1x3u) - Perfect for screws and bolts
+    - **Deep Bin** (2x2x6u) - General storage with label shelf
+    - **Socket Tray** (2x2x2u) - Pre-configured with 3x3 dividers
+    
+    After clicking a preset, a green placement ghost appears on the grid. Click anywhere to place the bin.
+    
+    <Tip>
+    Press `Escape` to cancel placement. Use the scroll wheel to zoom and Shift+Click to pan the grid.
+    </Tip>
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Configure the bin">
+    Click the bin you just placed to select it. The **Bin Configurator** panel opens on the right.
+    
+    **Adjust basic dimensions:**
+    - **Width / Depth**: Number of grid cells (1-10)
+    - **Height**: Units (1u = 7mm)
+    - **Wall Thickness**: Default 1.2mm
+    - **Bottom Thickness**: Default 0.8mm
+    - **Corner Radius**: 0mm (sharp) to 3.75mm (standard)
+    
+    **Add features:**
+    - **Stacking Lip**: +4.4mm lip that mirrors baseplate socket profile
+    - **Label Shelf**: Configurable width with 45-degree angle
+    - **Magnet Holes**: 6mm diameter, 2mm deep (4 per cell unit)
+    - **Screw Holes**: M3 clearance (4 per cell unit)
+    
+    **Add dividers:**
+    Click the **+** buttons directly on the grid to add dividers along the X or Y axis (up to 9 per direction).
+    
+    <Note>
+    The 3D preview updates in real-time as you adjust parameters. Toggle between Solid, X-Ray, and Blueprint render modes in the toolbar.
+    </Note>
+  </Step>
 
-### Step 3: Go live
+  <Step title="View in 3D">
+    The right panel shows a live 3D preview powered by Three.js.
+    
+    **Navigation:**
+    - **Left Click + Drag**: Rotate camera
+    - **Right Click + Drag**: Pan camera
+    - **Scroll Wheel**: Zoom in/out
+    
+    **Toolbar controls:**
+    - **Render Modes**: Solid (PBR plastic), X-Ray (transparent + edges), Blueprint (flat white)
+    - **Camera Presets**: Isometric, Front, Top
+    - **Section View**: Cutaway mode to inspect internal geometry
+    - **Dimension Labels**: Toggle real-world measurements in 3D
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Export for 3D printing">
+    Once you're happy with your layout, export it as a 3MF file:
+    
+    1. In the toolbar, click **Export 3MF**
+    2. Choose:
+       - **Export All Bins**: Multi-object 3MF with all bins positioned on the baseplate
+       - **Export Selected Bin**: Single bin only
+    3. Click the export button
+    4. A `.3mf` file downloads to your computer
+    
+    Open the 3MF file in PrusaSlicer, Cura, or Bambu Studio - all bins will be positioned correctly and ready to slice.
+    
+    <Tip>
+    Exported meshes are watertight and manifold thanks to the Manifold WASM CSG engine.
+    </Tip>
+  </Step>
+</Steps>
 
-## Next steps
-
-Now that you have your docs running, explore these key features:
+## Quick Tips
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Keyboard Shortcuts" icon="keyboard">
+    - `R` - Rotate selected bin
+    - `Delete` - Remove selected bin
+    - `Ctrl+Z` / `Ctrl+Shift+Z` - Undo/Redo
+    - `Escape` - Cancel action
+  </Card>
+  
+  <Card title="Auto-Fill" icon="grid">
+    Use **Auto-Fill** in the left sidebar to fill all empty space with bins of a chosen size (e.g., 1x1x3u).
+  </Card>
+  
+  <Card title="Share Your Layout" icon="link">
+    Click **Copy Share Link** to encode your entire layout in a URL. Anyone with the link sees your exact design.
+  </Card>
+  
+  <Card title="Save & Load" icon="floppy-disk">
+    Layouts are automatically saved to browser localStorage. Use the Save/Load buttons to manage multiple designs.
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install locally for offline use or run with Docker
+  </Card>
+  
+  <Card title="Features" icon="sparkles" href="/features/auto-fill">
+    Explore advanced features like BOM calculator and optimization tools
+  </Card>
+</CardGroup>
+
+<Warning>
+This tool generates bins following the official [Gridfinity specification](https://gridfinity.xyz/specification/) by Zack Freedman. Always test-print one bin before printing an entire layout to verify fit with your baseplate.
+</Warning>

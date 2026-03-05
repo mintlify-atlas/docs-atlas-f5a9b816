@@ -1,0 +1,388 @@
+---
+title: Bin Geometry
+description: CSG-based bin geometry generation using Manifold
+---
+
+## Overview
+
+The bin geometry module uses [Manifold](https://github.com/elalish/manifold) for constructive solid geometry (CSG) operations to generate Gridfinity bins. It provides two geometry variants:
+
+- **Preview geometry** - Simplified for fast 3D viewport rendering
+- **Export geometry** - Full-precision with per-cell base profiles for 3D printing
+
+## Import
+
+```typescript
+import { generateBinPreview, generateBinExport, type BinConfig } from '@/gridfinity/binGeometry';
+import type { ManifoldToplevel } from 'manifold-3d';
+```
+
+## BinConfig Interface
+
+Configuration for bin geometry generation.
+
+```typescript
+interface BinConfig {
+  w: number;                 // Width in grid units
+  d: number;                 // Depth in grid units
+  h: number;                 // Height in grid units
+  cornerRadius: number;      // Corner radius in mm
+  wallThickness: number;     // Wall thickness in mm
+  bottomThickness: number;   // Bottom thickness in mm
+  magnets?: boolean;         // Enable magnet holes
+  screws?: boolean;          // Enable screw holes
+  labelShelf?: boolean;      // Enable 45° label shelf
+  labelWidth?: number;       // Label shelf width in mm
+  dividersX?: number;        // Number of X-axis dividers
+  dividersY?: number;        // Number of Y-axis dividers
+}
+```
+
+Source: src/gridfinity/binGeometry.ts:366-379
+
+<ParamField path="w" type="number" required>
+  Width in grid units (1 unit = 42mm)
+</ParamField>
+
+<ParamField path="d" type="number" required>
+  Depth in grid units (1 unit = 42mm)
+</ParamField>
+
+<ParamField path="h" type="number" required>
+  Height in grid units (1 unit = 7mm)
+</ParamField>
+
+<ParamField path="cornerRadius" type="number" required>
+  Corner radius in millimeters (typically 3.75mm)
+</ParamField>
+
+<ParamField path="wallThickness" type="number" required>
+  Wall thickness in millimeters (typically 1.2mm)
+</ParamField>
+
+<ParamField path="bottomThickness" type="number" required>
+  Bottom thickness in millimeters (typically 0.8mm)
+</ParamField>
+
+<ParamField path="magnets" type="boolean" default="false">
+  Generate magnet holes at cell corners (6mm × 2mm)
+</ParamField>
+
+<ParamField path="screws" type="boolean" default="false">
+  Generate screw clearance holes (3.2mm diameter)
+</ParamField>
+
+<ParamField path="labelShelf" type="boolean" default="false">
+  Create 45° angled shelf on front wall for labels
+</ParamField>
+
+<ParamField path="labelWidth" type="number" default="12">
+  Label shelf depth in millimeters
+</ParamField>
+
+<ParamField path="dividersX" type="number" default="0">
+  Number of vertical dividers parallel to Y-axis
+</ParamField>
+
+<ParamField path="dividersY" type="number" default="0">
+  Number of vertical dividers parallel to X-axis
+</ParamField>
+
+## generateBinPreview
+
+Generates simplified bin geometry for fast viewport rendering.
+
+```typescript
+function generateBinPreview(
+  wasm: ManifoldToplevel,
+  config: BinConfig,
+): Manifold
+```
+
+<ParamField path="wasm" type="ManifoldToplevel" required>
+  Manifold WASM module instance
+</ParamField>
+
+<ParamField path="config" type="BinConfig" required>
+  Bin configuration
+</ParamField>
+
+### Returns
+
+A Manifold solid object representing the bin geometry.
+
+### Geometry Structure
+
+1. **Flat Base** (z = 0 → 4.75mm)
+   - Single solid slab at full bin width
+   - No per-cell profiles (simplified for performance)
+   - Rounded corners matching bin corner radius
+
+2. **Hollow Body** (z = 4.75mm → top)
+   - Outer shell with rounded corners
+   - Hollowed cavity with inner corner radius
+   - Walls: `wallThickness` on all sides
+   - Bottom: `bottomThickness` floor
+
+3. **Features**
+   - Magnet holes (if enabled)
+   - Screw holes (if enabled)
+   - Label shelf (if enabled)
+   - Dividers (if configured)
+
+Source: src/gridfinity/binGeometry.ts:388-420
+
+### Example
+
+```typescript
+import wasm from 'manifold-3d';
+import { generateBinPreview } from '@/gridfinity/binGeometry';
+import { GF } from '@/gridfinity/constants';
+
+const manifold = await wasm();
+
+const binGeometry = generateBinPreview(manifold, {
+  w: 2,
+  d: 2,
+  h: 3,
+  cornerRadius: GF.BIN_CORNER_RADIUS,
+  wallThickness: GF.WALL_THICKNESS,
+  bottomThickness: GF.BOTTOM_THICKNESS,
+  magnets: true,
+  labelShelf: true,
+  labelWidth: 12,
+  dividersX: 1,
+  dividersY: 0,
+});
+
+// Convert to mesh for Three.js
+const mesh = binGeometry.getMesh();
+```
+
+## generateBinExport
+
+Generates full-precision bin geometry for 3D printing.
+
+```typescript
+function generateBinExport(
+  wasm: ManifoldToplevel,
+  config: BinConfig,
+): Manifold
+```
+
+<ParamField path="wasm" type="ManifoldToplevel" required>
+  Manifold WASM module instance
+</ParamField>
+
+<ParamField path="config" type="BinConfig" required>
+  Bin configuration
+</ParamField>
+
+### Returns
+
+A Manifold solid object with full-precision geometry.
+
+### Geometry Structure
+
+1. **Per-Cell Base Profiles** (z = 0 → 4.75mm)
+   - Each grid cell has its own 5-layer Z-profile
+   - Exact tapered socket dimensions per Gridfinity spec
+   - Full-width bridging slab at z = 2.95 → 4.75mm
+
+2. **5-Layer Z-Profile**
+   - Layer 1 (z = 0.00 → 0.80mm): Base pad, 4.4mm inset
+   - Layer 2 (z = 0.80 → 1.60mm): Chamfer to 2.8mm inset
+   - Layer 3 (z = 1.60 → 2.15mm): Straight section
+   - Layer 4 (z = 2.15 → 2.95mm): Chamfer to 1.2mm inset
+   - Layer 5 (z = 2.95 → 4.75mm): Full-width bridging slab
+
+3. **Body & Features**
+   - Same hollow body, holes, and features as preview geometry
+
+Source: src/gridfinity/binGeometry.ts:495-537
+
+### Z-Profile Details
+
+The export geometry implements the exact Gridfinity base specification:
+
+```typescript
+const Z_PROFILE_SECTIONS: ZSection[] = [
+  { zStart: 0.00, height: 0.80, shrinkBot: 4.40, shrinkTop: 4.40, rShrinkBot: 2.20 },
+  { zStart: 0.80, height: 0.80, shrinkBot: 4.40, shrinkTop: 2.80, rShrinkBot: 2.20 },
+  { zStart: 1.60, height: 0.55, shrinkBot: 2.80, shrinkTop: 2.80, rShrinkBot: 1.40 },
+  { zStart: 2.15, height: 0.80, shrinkBot: 2.80, shrinkTop: 1.20, rShrinkBot: 1.40 },
+];
+```
+
+Source: src/gridfinity/binGeometry.ts:435-440
+
+### Example
+
+```typescript
+import wasm from 'manifold-3d';
+import { generateBinExport } from '@/gridfinity/binGeometry';
+import { manifoldToTriangleMesh, exportTo3MF } from '@/gridfinity/export3mf';
+
+const manifold = await wasm();
+
+const binGeometry = generateBinExport(manifold, {
+  w: 2,
+  d: 2,
+  h: 6,
+  cornerRadius: 3.75,
+  wallThickness: 1.2,
+  bottomThickness: 0.8,
+  magnets: true,
+  screws: true,
+  labelShelf: true,
+  labelWidth: 12,
+});
+
+// Export to 3MF
+const mesh = manifoldToTriangleMesh(binGeometry);
+const blob = await exportTo3MF([{ mesh, name: 'Deep Bin 2x2x6' }]);
+```
+
+## CSG Operations
+
+The geometry is built using Manifold's CSG operations:
+
+### Boolean Operations
+
+- **Union** (`add`): Combines multiple solids
+- **Subtraction** (`subtract`): Removes geometry (for holes, cavities)
+- **Intersection** (not used in bins)
+
+### Primitive Creation
+
+```typescript
+// Rounded box via extrusion
+const polygon = createRoundedRectPolygon(width, depth, radius);
+const crossSection = new wasm.CrossSection(polygon);
+const solid = crossSection.extrude(height);
+```
+
+Source: src/gridfinity/binGeometry.ts:8-38
+
+### Transformations
+
+```typescript
+// Translation
+const moved = solid.translate([x, y, z]);
+
+// Mirroring
+const mirrored = solid.mirror([0, 0, 1]); // Mirror across Z
+
+// Tapered extrusion
+const tapered = crossSection.extrude(height, 0, 0, [scaleX, scaleY]);
+```
+
+## Feature Implementation
+
+### Magnet Holes
+
+Positioned at cell corners with automatic deduplication:
+
+```typescript
+// 6mm diameter + 0.5mm clearance
+const radius = (GF.MAGNET_DIAMETER + 0.5) / 2;
+const depth = GF.MAGNET_DEPTH + 0.4;
+
+// Inset calculation to avoid corner radius collision
+const inset = Math.max(8.0, cornerRadius + radius + 1.0);
+```
+
+Source: src/gridfinity/binGeometry.ts:115-131
+
+### Screw Holes
+
+Clearance holes through entire base:
+
+```typescript
+const radius = GF.SCREW_HOLE_DIAMETER / 2; // 3.2mm
+const depth = GF.BASE_TOTAL_HEIGHT; // Through base
+```
+
+Source: src/gridfinity/binGeometry.ts:133-148
+
+### Label Shelf
+
+45° wedge cut into front wall:
+
+```typescript
+// Creates angled surface at 45° from rim downward
+const shelfDepth = Math.min(labelWidth, outerD / 2);
+const shelfHeight = shelfDepth * Math.tan(45 * Math.PI / 180);
+
+// Tapered extrusion: full at top (rim), collapsed at bottom
+const wedge = crossSection.extrude(shelfHeight, 0, 0, [1, 0.001]);
+```
+
+Source: src/gridfinity/binGeometry.ts:171-210
+
+### Dividers
+
+Vertical walls subdividing the cavity:
+
+```typescript
+// X dividers: parallel to Y-axis
+for (let i = 1; i <= dividersX; i++) {
+  const x = -innerW / 2 + (innerW / (dividersX + 1)) * i;
+  const divider = wasm.Manifold.cube([divThick, innerD, cavityH])
+    .translate([x - divThick / 2, -innerD / 2, cavityStartZ]);
+}
+
+// Y dividers: parallel to X-axis
+for (let i = 1; i <= dividersY; i++) {
+  const y = -innerD / 2 + (innerD / (dividersY + 1)) * i;
+  const divider = wasm.Manifold.cube([innerW, divThick, cavityH])
+    .translate([-innerW / 2, y - divThick / 2, cavityStartZ]);
+}
+```
+
+Source: src/gridfinity/binGeometry.ts:214-246
+
+## Performance Considerations
+
+### Preview vs Export
+
+| Feature | Preview | Export |
+|---------|---------|--------|
+| Base geometry | Single flat slab | Per-cell 5-layer profiles |
+| Polygon count | Lower | Higher |
+| Render speed | Fast | Slower |
+| Print quality | N/A | Exact spec |
+| Use case | Interactive viewport | 3MF export |
+
+### Optimization Tips
+
+- Use `generateBinPreview` for real-time 3D viewport updates
+- Use `generateBinExport` only when exporting to 3MF
+- Delete Manifold objects after use to free memory:
+  ```typescript
+  const bin = generateBinPreview(wasm, config);
+  // ... use bin ...
+  bin.delete(); // Free WASM memory
+  ```
+
+## Memory Management
+
+Manifold uses WASM memory that must be manually freed:
+
+```typescript
+import wasm from 'manifold-3d';
+
+const manifold = await wasm();
+
+// Create geometry
+const bin1 = generateBinPreview(manifold, config1);
+const bin2 = generateBinPreview(manifold, config2);
+
+// Use geometries...
+
+// Clean up
+bin1.delete();
+bin2.delete();
+```
+
+Source: src/gridfinity/binGeometry.ts:61-72

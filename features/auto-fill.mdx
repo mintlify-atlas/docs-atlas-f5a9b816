@@ -1,0 +1,336 @@
+---
+title: 'Auto-Fill'
+description: 'Automatically fill empty grid space with bins and optimize baseplate layouts using bin-packing algorithms'
+icon: 'fill'
+---
+
+Auto-Fill and layout optimization tools help you maximize grid utilization and find the most compact baseplate configuration for your bin collection.
+
+## Overview
+
+The Auto-Fill feature analyzes your grid to find all available empty space and fills it with bins of a specified size. Combined with the Optimize Layout tool, you can efficiently pack bins and minimize wasted baseplate area.
+
+## Auto-Fill Empty Space
+
+Fill all unoccupied grid cells with identical bins:
+
+### How It Works
+
+1. **Select bin size** (W × D × H) using quick presets or custom dimensions
+2. **Click "Auto-Fill Grid"** button in sidebar
+3. **Algorithm scans grid** for empty cells (left-to-right, top-to-bottom)
+4. **Places bins** at valid positions (collision-checked)
+5. **Grid updates** with newly added bins
+6. **3D preview renders** all new geometry
+
+### Fill Algorithm
+
+```typescript
+for (row = 0; row < gridRows; row++) {
+  for (col = 0; col < gridCols; col++) {
+    if (canPlaceBin(col, row, binW, binD)) {
+      placeBin(col, row, binW, binD, binH);
+    }
+  }
+}
+```
+
+- **Greedy approach**: Fills top-left first
+- **Collision detection**: Skips occupied cells
+- **Partial fills**: Places as many as fit (may leave gaps)
+
+<Note>
+  Auto-fill does **not** remove existing bins. It only fills empty space around your current layout.
+</Note>
+
+## Bin Size Presets
+
+Quick-select common bin sizes:
+
+<CardGroup cols={3}>
+  <Card title="1×1×3u" icon="square">
+    Small parts bins
+    - Screws, resistors
+    - 41.5 × 41.5 × 25.75mm
+  </Card>
+  <Card title="1×2×3u" icon="rectangle-wide">
+    Cable/tool bins
+    - USB cables, drivers
+    - 41.5 × 83.5 × 25.75mm
+  </Card>
+  <Card title="2×2×3u" icon="grid-2-plus">
+    Medium storage
+    - Socket sets, modules
+    - 83.5 × 83.5 × 25.75mm
+  </Card>
+</CardGroup>
+
+### Custom Dimensions
+
+Specify any valid bin size:
+
+- **Width**: 1-10 cells
+- **Depth**: 1-10 cells
+- **Height**: 1-12 units
+- Number inputs with validation
+
+<Tip>
+  Use **1×1×3u** bins to maximize grid utilization—they fit in any empty cell and leave minimal waste.
+</Tip>
+
+## Optimize Layout
+
+Find the smallest baseplate that fits all your bins:
+
+### Bin-Packing Heuristic
+
+The optimizer uses a **greedy bin-packing algorithm**:
+
+1. **Sort bins** by area (largest first)
+2. **Try grid sizes** from smallest to largest:
+   - Start at minimum bounding box
+   - Increment by 1 cell
+   - Test up to 12×12 max
+3. **For each grid size**, attempt to pack all bins:
+   - Place each bin at first valid position
+   - Scan left-to-right, top-to-bottom
+   - Backtrack if placement fails
+4. **Return first valid configuration**
+
+### Algorithm Details
+
+```typescript
+function optimizeLayout(bins: Bin[]): { cols: number, rows: number } {
+  const sorted = bins.sort((a, b) => (b.w * b.d) - (a.w * a.d));
+  
+  for (let size = minSize; size <= 12; size++) {
+    if (canPackAll(sorted, size, size)) {
+      return { cols: size, rows: size };
+    }
+  }
+  
+  return { cols: 12, rows: 12 }; // fallback
+}
+```
+
+<Warning>
+  Bin packing is NP-hard. The optimizer uses a heuristic (not exhaustive search) and may not find the absolute smallest configuration.
+</Warning>
+
+## Use Cases
+
+### 1. Uniform Bin Grids
+
+**Goal**: Fill entire baseplate with identical bins
+
+**Steps**:
+1. Start with empty grid
+2. Select bin size (e.g., 1×1×3u)
+3. Click "Auto-Fill Grid"
+4. Result: Fully packed baseplate
+
+**Example**: 6×6 grid → 36 bins of 1×1×3u
+
+### 2. Mixed Layouts
+
+**Goal**: Add filler bins around custom designs
+
+**Steps**:
+1. Manually place large bins (2×3, 3×4, etc.)
+2. Select small filler size (1×1 or 1×2)
+3. Auto-fill remaining space
+4. Result: No wasted cells
+
+### 3. Baseplate Optimization
+
+**Goal**: Minimize baseplate size for a bin collection
+
+**Steps**:
+1. Add all required bins (any size)
+2. Click "Optimize Layout"
+3. Grid resizes to smallest fit
+4. Bins rearrange automatically
+5. Export optimized layout
+
+<Tip>
+  Run **Optimize Layout** before exporting to save filament on baseplate printing.
+</Tip>
+
+## Grid Size Presets
+
+Quickly resize grid to common printer sizes:
+
+| Preset | Grid | Real Size |
+|--------|------|--------|
+| Bambu Lab A1 | 6×6 | 252×252mm |
+| Bambu Lab A1 Mini | 4×4 | 168×168mm |
+| Bambu Lab P1S | 6×6 | 252×252mm |
+| Bambu Lab X1C | 6×6 | 252×252mm |
+| 19" Server Rack | 10×8 | 420×336mm |
+| Custom | Any | Any |
+
+<Note>
+  Grid presets clear the current layout. Save your design first if needed.
+</Note>
+
+## Fill Strategy Options
+
+Future enhancements (not yet implemented):
+
+- **Fill mode**: Dense vs. sparse
+- **Color alternation**: Checkerboard patterns
+- **Height variation**: Random or gradient heights
+- **Feature randomization**: Random dividers, magnets
+
+## Bill of Materials (BOM)
+
+After auto-filling, view the generated BOM:
+
+### Bin Count by Type
+
+Grouped summary:
+
+```
+1×1×3u: 24 bins
+2×2×4u: 6 bins
+1×3×6u: 4 bins
+```
+
+### Material Estimate
+
+- **Total volume**: Sum of all bin volumes (cm³)
+- **PLA weight**: Volume × 1.24 g/cm³ density
+- **Cost estimate**: Weight × price per kg
+  - Default: €20/kg
+  - Configurable in settings
+
+<Accordion title="Example BOM Calculation">
+  **Layout**: 10× (2×2×4u bins)
+  
+  **Geometry**:
+  - Outer volume: ~120cm³ per bin
+  - Hollowed (walls/bottom): ~40cm³ per bin
+  
+  **Total**:
+  - Material: 10 × 40cm³ = 400cm³
+  - Weight: 400cm³ × 1.24 g/cm³ = 496g
+  - Cost: 496g × €20/kg = €9.92
+</Accordion>
+
+## Print Labels
+
+Generate a printable reference sheet:
+
+- One row per bin
+- Columns: Name, Dimensions, Grid Position, Features
+- Printer-friendly layout
+- Useful for organizing physical bins
+
+<Tip>
+  Print labels on adhesive paper and stick them to bin fronts (or use label shelf).
+</Tip>
+
+## Performance Considerations
+
+### Auto-Fill Speed
+
+- **Small bins** (1×1): Fast (~0.1s per bin)
+- **Large bins** (3×3): Slower (~0.5s per bin)
+- **Web Worker**: Geometry generation offloaded
+- **Batch updates**: UI updates every 5 bins
+
+### Optimize Layout Speed
+
+- **10 bins**: &lt;1 second
+- **50 bins**: 2-5 seconds
+- **100+ bins**: May timeout (not recommended)
+
+<Warning>
+  Optimizing layouts with >50 bins may be slow or fail. Consider splitting into multiple baseplates.
+</Warning>
+
+## Undo/Redo Support
+
+All auto-fill and optimize operations are undoable:
+
+- **Ctrl+Z**: Undo last operation
+- **Ctrl+Shift+Z**: Redo
+- Full history stack preserved
+
+## Tips & Best Practices
+
+<Tip>
+  **Test incrementally**: Auto-fill with 1-2 bins first to verify configuration before filling entire grid.
+</Tip>
+
+<Tip>
+  **Use optimize before export**: Minimize baseplate size to save printing time and filament.
+</Tip>
+
+<Tip>
+  **Mix bin sizes**: Place large bins manually, then auto-fill with small bins for maximum efficiency.
+</Tip>
+
+<Note>
+  Auto-fill uses the **current bin defaults** from the configurator (wall thickness, corner radius, etc.).
+</Note>
+
+## Keyboard Shortcuts
+
+No dedicated shortcuts yet, but you can:
+
+- **Ctrl+Z** after auto-fill to undo
+- **Ctrl+A** to select all bins (useful after auto-fill)
+- **Delete** to remove all selected bins
+
+## Technical Implementation
+
+- **Collision detection**: AABB (Axis-Aligned Bounding Box)
+- **Bin packing**: Greedy first-fit decreasing heuristic
+- **Grid scanning**: Row-major order (top-left to bottom-right)
+- **State management**: Zustand store with history tracking
+- **Geometry generation**: Web Worker (async)
+
+### Collision Detection Algorithm
+
+```typescript
+function checkCollision(
+  bins: Bin[],
+  newBin: { x: number, y: number, w: number, d: number },
+  excludeId: string | null,
+  gridCols: number,
+  gridRows: number
+): boolean {
+  // Check grid bounds
+  if (newBin.x < 0 || newBin.y < 0 ||
+      newBin.x + newBin.w > gridCols ||
+      newBin.y + newBin.d > gridRows) {
+    return true; // out of bounds
+  }
+  
+  // Check overlap with existing bins
+  for (const bin of bins) {
+    if (bin.id === excludeId) continue;
+    
+    if (!(newBin.x >= bin.x + bin.w ||
+          newBin.x + newBin.w <= bin.x ||
+          newBin.y >= bin.y + bin.d ||
+          newBin.y + newBin.d <= bin.y)) {
+      return true; // collision
+    }
+  }
+  
+  return false; // no collision
+}
+```
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="2D Grid Canvas" icon="grid-2" href="/features/2d-grid">
+    View and edit auto-filled bins
+  </Card>
+  <Card title="Bin Configurator" icon="sliders" href="/features/bin-configurator">
+    Configure bin parameters for auto-fill
+  </Card>
+</CardGroup>

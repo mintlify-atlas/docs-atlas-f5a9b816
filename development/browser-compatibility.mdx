@@ -1,0 +1,234 @@
+---
+title: Browser Compatibility
+description: Supported browsers and platform-specific requirements for Gridfinity Builder
+---
+
+## Browser Support Matrix
+
+| Browser | Support Level | Install PWA | Offline Support |
+|---------|---------------|-------------|------------------|
+| Chrome / Edge | ✅ Full | ✅ Yes | ✅ Yes |
+| Firefox | ⚠️ Partial | ❌ No install prompt | ✅ Yes |
+| Safari (macOS) | ⚠️ Partial | ⚠️ Manual (Add to Dock) | ✅ Yes |
+| Safari (iOS) | ⚠️ Partial | ⚠️ Add to Home Screen | ✅ Yes |
+
+## Core Requirements
+
+### WebAssembly (WASM)
+
+Gridfinity Builder requires **WebAssembly** support for the Manifold 3D CSG engine.
+
+**Minimum browser versions with WASM:**
+- Chrome 57+ (March 2017)
+- Firefox 52+ (March 2017)
+- Safari 11+ (September 2017)
+- Edge 16+ (October 2017)
+
+**Why WASM?**
+- Near-native performance for CSG operations
+- Efficient binary format (smaller than JS)
+- Safe execution in sandbox
+- Required by Manifold 3D library
+
+### ES2020+ JavaScript
+
+The TypeScript compiler targets ES2020, requiring modern JavaScript features:
+
+**Required features:**
+- `Optional chaining` (`?.`)
+- `Nullish coalescing` (`??`)
+- `BigInt` support
+- `Promise.allSettled()`
+- `String.matchAll()`
+- `Dynamic import()`
+
+**Minimum browser versions:**
+- Chrome 80+ (February 2020)
+- Firefox 74+ (March 2020)
+- Safari 13.1+ (March 2020)
+- Edge 80+ (February 2020)
+
+### Web Workers
+
+Heavy geometry generation runs in a background thread.
+
+**Browser support:**
+- All modern browsers support Web Workers
+- Required for non-blocking CSG operations
+- Fallback to main thread not implemented (Workers are mandatory)
+
+## Progressive Web App (PWA) Support
+
+### Installation Experience
+
+#### Chrome / Edge (Chromium)
+
+✅ **Full PWA support**
+- Automatic install prompt when criteria met
+- "Install" button in address bar
+- Works on Windows, macOS, Linux, Android
+- Creates desktop/dock shortcut
+- Standalone window (no browser UI)
+
+#### Firefox
+
+⚠️ **Partial support**
+- Service Worker caching works (offline mode)
+- No automatic install prompt
+- No "Add to Home Screen" UI on desktop
+- On Android: Manual "Install" option in menu
+
+**Workaround:** Users can manually add to desktop:
+- Right-click tab → "Pin Tab"
+- Bookmark the page
+
+#### Safari (macOS)
+
+⚠️ **Manual installation**
+- No install prompt
+- Service Worker support since Safari 11.1
+- User must manually: `File → Add to Dock`
+- Creates web app in dock
+- Limited PWA manifest support
+
+#### Safari (iOS)
+
+⚠️ **"Add to Home Screen" flow**
+- No install prompt
+- User must tap Share → "Add to Home Screen"
+- Creates icon on home screen
+- Runs in standalone mode
+- Service Worker caching works (offline)
+
+### Offline Caching
+
+All browsers with Service Worker support can use Gridfinity Builder offline after the first load.
+
+**Cached assets:**
+- JavaScript bundles
+- CSS stylesheets
+- HTML entry point
+- WASM modules (Manifold 3D, ~5MB)
+- Web fonts (Google Fonts)
+
+**Cache configuration** (from `vite.config.ts`):
+```typescript
+globPatterns: ['**/*.{js,css,html,wasm,woff2}']
+maximumFileSizeToCacheInBytes: 10 * 1024 * 1024  // 10 MB
+```
+
+**Cache strategy:**
+- Static assets: Cache-first
+- Google Fonts: Cache-first with 1-year expiration
+- Runtime caching for external resources
+
+## Performance Considerations
+
+### WASM Performance
+
+| Browser | Relative WASM Performance |
+|---------|---------------------------|
+| Chrome | 100% (baseline) |
+| Edge | 100% (same engine) |
+| Firefox | 95-100% |
+| Safari | 85-95% (slower WASM JIT) |
+
+**Note:** Safari's WASM performance is slightly slower, but still acceptable for Gridfinity Builder's use case.
+
+### WebGL Performance
+
+Three.js requires WebGL for 3D rendering.
+
+**WebGL versions:**
+- WebGL 1.0: Supported by all modern browsers
+- WebGL 2.0: Preferred for better performance
+
+**Minimum GPU requirements:**
+- Intel HD Graphics 4000+ (2012)
+- Any dedicated GPU from the last 10 years
+- Mobile: Most smartphones from 2016+
+
+## Known Limitations
+
+### Firefox
+
+- No install button or prompt
+- PWA manifest limited to Android only
+- Otherwise fully functional
+
+### Safari (macOS)
+
+- No install prompt
+- Service Worker debugging is limited
+- Slightly slower WASM execution
+- PWA manifest support incomplete
+
+### Safari (iOS)
+
+- No install prompt (manual Add to Home Screen)
+- 50MB Service Worker cache limit (Gridfinity Builder fits comfortably)
+- No push notifications (not used by Gridfinity Builder)
+- Standalone mode hides browser chrome
+
+### Mobile Browsers
+
+- Touch interactions work but desktop is recommended
+- Smaller screen makes detailed CAD work difficult
+- 3D performance depends on mobile GPU
+- Gestures may conflict with orbit controls
+
+## Testing Recommendations
+
+### Desktop
+
+**Primary:** Chrome/Edge (best PWA experience)
+**Secondary:** Firefox (for WASM compatibility testing)
+**Tertiary:** Safari (for cross-platform validation)
+
+### Mobile
+
+**Primary:** Chrome Android (full PWA support)
+**Secondary:** Safari iOS (for iOS users)
+
+## Recommended Browser Versions
+
+| Browser | Minimum | Recommended |
+|---------|---------|-------------|
+| Chrome | 80 | Latest |
+| Edge | 80 | Latest |
+| Firefox | 74 | Latest |
+| Safari | 13.1 | 15+ |
+
+## Debugging Support
+
+### DevTools Compatibility
+
+| Feature | Chrome | Firefox | Safari |
+|---------|--------|---------|--------|
+| React DevTools | ✅ | ✅ | ✅ |
+| Service Worker inspection | ✅ | ✅ | ⚠️ Limited |
+| WASM debugging | ✅ | ✅ | ❌ |
+| Web Worker debugging | ✅ | ✅ | ⚠️ Limited |
+
+### Best Debugging Experience
+
+Chrome DevTools offers the best debugging experience:
+- Full Service Worker inspection
+- WASM breakpoints and stepping
+- Web Worker console and profiling
+- React component tree inspection
+- Performance profiling for CSG operations
+
+## Feature Detection
+
+Gridfinity Builder does not implement fallbacks. It requires:
+
+- ✅ WebAssembly
+- ✅ Web Workers
+- ✅ ES2020+
+- ✅ WebGL
+- ✅ Service Workers (for offline)
+
+**No graceful degradation:** If these features are missing, the app will not function.
+
+**Future consideration:** Add a compatibility check on load and show a friendly error message if requirements are not met.

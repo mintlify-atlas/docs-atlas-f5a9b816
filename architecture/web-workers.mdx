@@ -1,0 +1,291 @@
+---
+title: Web Workers
+description: How Web Workers keep the UI responsive during heavy geometry computation
+---
+
+Gridfinity Builder uses [Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API) to offload computationally expensive CSG operations to background threads, ensuring the main thread remains responsive for user interactions.
+
+## Why Web Workers?
+
+JavaScript is single-threaded by default. Heavy computation on the main thread causes:
+
+- **UI freezing**: No input events processed while computing
+- **Janky animations**: Frame drops during geometry generation
+- **Poor UX**: App feels unresponsive
+
+Web Workers solve this by:
+
+- Running code in a separate OS thread
+- Communicating via message passing (no shared memory)
+- Keeping the main thread free for rendering and events
+
+## Worker Architecture
+
+Gridfinity Builder uses a single persistent worker (`manifoldWorker.ts`) that:
+
+1. Initializes the Manifold WASM module once
+2. Receives bin configurations from the main thread
+3. Generates CSG meshes
+4. Transfers mesh buffers back to the main thread
+
+## Worker Implementation
+
+The worker is defined in `manifoldWorker.ts:1-62`:
+
+```typescript manifoldWorker.ts:1-13
+import Module from 'manifold-3d';
+import type { ManifoldToplevel } from 'manifold-3d';
+import { generateBinPreview, generateBinExport, type BinConfig } from '../gridfinity/binGeometry';
+
+let wasm: ManifoldToplevel | null = null;
+
+async function ensureWasm(): Promise<ManifoldToplevel> {
+  if (wasm) return wasm;
+  const m = await Module();
+  m.setup();
+  wasm = m;
+  return m;
+}
+```
+
+The WASM module is lazy-loaded on first use and cached in a module-level variable.
+
+### Message Handler
+
+The worker listens for messages from the main thread (`manifoldWorker.ts:33-61`):
+
+```typescript manifoldWorker.ts:33-61
+self.onmessage = async (e: MessageEvent) => {
+  const { type, config, requestId } = e.data as {
+    type: 'preview' | 'export';
+    config: BinConfig;
+    requestId: string;
+  };
+
+  try {
+    const m = await ensureWasm();
+
+    const manifold = type === 'export'
+      ? generateBinExport(m, config)
+      : generateBinPreview(m, config);
+
+    const { positions, indices } = extractMesh(manifold);
+    manifold.delete();
+
+    (self as any).postMessage(
+      { type: 'mesh', requestId, positions, indices },
+      [positions.buffer, indices.buffer],
+    );
+  } catch (err) {
+    (self as any).postMessage({
+      type: 'error',
+      requestId,
+      error: String(err),
+    });
+  }
+};
+```
+
+<Steps>
+  <Step title="Receive Request">
+    Worker gets a message with `type` (preview/export), `config` (bin parameters), and `requestId` (for response matching)
+  </Step>
+  
+  <Step title="Initialize WASM">
+    Ensure Manifold WASM is loaded (first request only)
+  </Step>
+  
+  <Step title="Generate Geometry">
+    Call `generateBinPreview` or `generateBinExport` based on request type
+  </Step>
+  
+  <Step title="Extract Mesh Data">
+    Convert Manifold's internal mesh format to raw Float32Array/Uint32Array buffers
+  </Step>
+  
+  <Step title="Transfer Buffers">
+    Send mesh back to main thread using Transferable Objects for zero-copy performance
+  </Step>
+  
+  <Step title="Handle Errors">
+    If generation fails, post an error message back to main thread
+  </Step>
+</Steps>
+
+## Main Thread Interface
+
+The `useManifoldWorker.ts` hook provides the main thread API for communicating with the worker.
+
+### Worker Singleton
+
+A single worker instance is created and reused (`useManifoldWorker.ts:12-32`):
+
+```typescript useManifoldWorker.ts:12-32
+function getWorker(): Worker {
+  if (!worker) {
+    worker = new Worker(
+      new URL('../workers/manifoldWorker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    worker.onmessage = (e: MessageEvent) => {
+      const { type, requestId, positions, indices, error } = e.data;
+      const entry = pending.get(requestId);
+      if (!entry) return;
+      pending.delete(requestId);
+
+      if (type === 'mesh') {
+        entry.resolve({ positions, indices });
+      } else if (type === 'error') {
+        entry.reject(error);
+      }
+    };
+  }
+  return worker;
+}
+```
+
+The worker is created with `type: 'module'` to support ES module imports (TypeScript, Manifold library).
+
+### Request-Response Matching
+
+Since workers use asynchronous message passing, requests are tracked by unique IDs:
+
+```typescript useManifoldWorker.ts:8-10
+type Callback = (result: MeshResult) => void;
+type ErrorCallback = (err: string) => void;
+
+const pending = new Map<string, { resolve: Callback; reject: ErrorCallback }>();
+let idCounter = 0;
+```
+
+Each request gets a unique ID, and the corresponding Promise callbacks are stored in the `pending` map.
+
+### Promise-Based API
+
+The `requestMesh` function wraps the message-passing API in a Promise (`useManifoldWorker.ts:41-60`):
+
+```typescript useManifoldWorker.ts:41-60
+export function requestMesh(
+  mode: 'preview' | 'export',
+  config: BinConfig,
+): Promise<MeshResult> {
+  const hash = mode + ':' + configHash(config);
+  const cached = meshCache.get(hash);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve, reject) => {
+    const requestId = `req_${++idCounter}`;
+    pending.set(requestId, {
+      resolve: (result) => {
+        meshCache.set(hash, result);
+        resolve(result);
+      },
+      reject,
+    });
+    getWorker().postMessage({ type: mode, config, requestId });
+  });
+}
+```
+
+## Cancellation Pattern
+
+For interactive editing, only the latest request for a given bin should complete. The `requestBinMesh` function cancels outdated requests (`useManifoldWorker.ts:65-98`):
+
+```typescript useManifoldWorker.ts:78-80
+const prev = activeBinRequests.get(binId);
+if (prev) pending.delete(prev);
+```
+
+This deletes the pending callback for the previous request, so even if the worker sends a response, it's ignored.
+
+## Transferable Objects
+
+Mesh buffers are transferred using [Transferable Objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects), avoiding expensive memory copies:
+
+```typescript manifoldWorker.ts:50-53
+(self as any).postMessage(
+  { type: 'mesh', requestId, positions, indices },
+  [positions.buffer, indices.buffer],
+);
+```
+
+The second argument to `postMessage` specifies which ArrayBuffers should be **transferred** (ownership moved) instead of copied. After transfer:
+
+- The worker thread can no longer access these buffers
+- The main thread owns the buffers
+- No memory duplication occurs
+
+For a 100k vertex mesh:
+
+- **Without transfer**: ~2.4 MB copied (100k × 3 floats × 4 bytes + 300k indices × 4 bytes)
+- **With transfer**: ~0 bytes copied (ownership transferred)
+
+## Mesh Caching
+
+The `useManifoldWorker` hook caches mesh results by configuration hash (`useManifoldWorker.ts:38-39`):
+
+```typescript useManifoldWorker.ts:38-39
+const meshCache = new Map<string, MeshResult>();
+```
+
+If a request matches a cached configuration, the cached mesh is returned immediately without posting to the worker.
+
+### Cache Invalidation
+
+The cache persists for the lifetime of the page. To clear it:
+
+```typescript useManifoldWorker.ts:100-102
+export function clearMeshCache() {
+  meshCache.clear();
+}
+```
+
+## Error Handling
+
+If geometry generation fails, the worker catches the error and posts an error message (`manifoldWorker.ts:54-59`):
+
+```typescript manifoldWorker.ts:54-59
+(self as any).postMessage({
+  type: 'error',
+  requestId,
+  error: String(err),
+});
+```
+
+The main thread rejects the corresponding Promise, allowing components to handle failures gracefully.
+
+## Performance Impact
+
+### Without Web Workers
+
+- Generating a 2×2×6 bin with dividers: ~200ms
+- Main thread blocked for entire duration
+- UI freezes, no input response
+- Frame rate drops to 0 FPS
+
+### With Web Workers
+
+- Same generation: ~200ms in background thread
+- Main thread continues rendering at 60 FPS
+- Input events processed immediately
+- Smooth user experience
+
+## Browser Compatibility
+
+Web Workers are supported in all modern browsers:
+
+- Chrome/Edge: Full support
+- Firefox: Full support
+- Safari: Full support (desktop and iOS)
+
+ES module workers (`type: 'module'`) require:
+
+- Chrome 80+
+- Firefox 114+
+- Safari 15+
+
+## Limitations
+
+- **No DOM access**: Workers cannot manipulate the DOM or call Three.js directly
+- **Message passing overhead**: Small messages (&lt;1KB) may be slower than direct calls
+- **WASM memory**: Worker runs in a separate process with its own WASM heap (memory not shared with main thread)

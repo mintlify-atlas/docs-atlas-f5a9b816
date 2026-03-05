@@ -1,0 +1,148 @@
+---
+title: Project Structure
+description: Overview of the Gridfinity Builder codebase organization and component hierarchy
+---
+
+## Directory Structure
+
+The project follows a modular architecture with clear separation of concerns:
+
+```
+src/
+├── main.tsx                     # Entry point
+├── App.tsx                      # Layout: Toolbar + Sidebar + Canvas
+│
+├── store/
+│   └── useStore.ts              # Zustand store (bins, grid, undo/redo)
+│
+├── components/
+│   ├── Toolbar.tsx              # Top bar: view modes, export, camera
+│   ├── Sidebar.tsx              # Left panel: presets, bin list, BOM, tools
+│   ├── GridCanvas2D.tsx         # 2D SVG grid with all interactions
+│   ├── BinConfigurator.tsx      # Bin parameter editor
+│   └── Viewport3D.tsx           # Three.js 3D preview
+│
+├── gridfinity/
+│   ├── constants.ts             # Gridfinity dimensions & presets
+│   ├── binGeometry.ts           # Manifold CSG bin generation
+│   ├── baseplateGeometry.ts     # Manifold CSG baseplate generation
+│   ├── profiles.ts              # Z-profile cross sections
+│   └── export3mf.ts             # 3MF packaging (JSZip + XML)
+│
+├── hooks/
+│   ├── useManifold.ts           # WASM initialization
+│   └── useManifoldWorker.ts     # Web Worker interface
+│
+├── workers/
+│   └── manifoldWorker.ts        # Background geometry generation
+│
+└── utils/
+    ├── collision.ts             # AABB collision detection
+    ├── gridMath.ts              # Screen <-> Grid coordinate math
+    └── meshToThree.ts           # Manifold mesh -> Three.js geometry
+```
+
+## Core Directories
+
+### `/store`
+
+Contains the application's global state management using Zustand:
+
+- **`useStore.ts`**: Central store managing bins, grid configuration, undo/redo history, and all application state
+
+### `/components`
+
+React components for the user interface:
+
+- **`Toolbar.tsx`**: Top navigation bar with view mode controls (Solid/X-Ray/Blueprint), export buttons, and camera presets
+- **`Sidebar.tsx`**: Left panel containing printer presets, bin list, Bill of Materials, and layout optimization tools
+- **`GridCanvas2D.tsx`**: Interactive SVG-based 2D grid with drag-and-drop, resize handles, collision detection, and visual feedback
+- **`BinConfigurator.tsx`**: Parameter editor for individual bins (dimensions, walls, dividers, features)
+- **`Viewport3D.tsx`**: Three.js-powered 3D preview with multiple render modes and camera controls
+
+### `/gridfinity`
+
+Core Gridfinity geometry generation and export logic:
+
+- **`constants.ts`**: Official Gridfinity specification values (cell size, height units, tolerances) and printer/bin presets
+- **`binGeometry.ts`**: Manifold CSG operations for generating bin meshes with all features (base profile, dividers, magnet holes)
+- **`baseplateGeometry.ts`**: Baseplate generation with socket profiles for bin interlocking
+- **`profiles.ts`**: 2D cross-section profiles for the Z-axis base geometry
+- **`export3mf.ts`**: 3MF file format packaging using JSZip and XML serialization
+
+### `/hooks`
+
+React hooks for managing asynchronous operations:
+
+- **`useManifold.ts`**: Initializes and manages the Manifold WASM module lifecycle
+- **`useManifoldWorker.ts`**: Web Worker interface for offloading heavy CSG operations to a background thread
+
+### `/workers`
+
+Background thread workers:
+
+- **`manifoldWorker.ts`**: Handles geometry generation in a separate thread to keep the UI responsive during heavy CSG operations
+
+### `/utils`
+
+Utility functions and helper modules:
+
+- **`collision.ts`**: AABB (Axis-Aligned Bounding Box) collision detection for bin placement validation
+- **`gridMath.ts`**: Coordinate system transformations between screen space and grid space
+- **`meshToThree.ts`**: Converts Manifold mesh data structures to Three.js BufferGeometry
+
+## Component Hierarchy
+
+The application follows a clear component hierarchy:
+
+```
+App
+├── Toolbar
+│   ├── View Mode Controls (Solid/X-Ray/Blueprint)
+│   ├── Export Buttons (Single/All Bins)
+│   └── Camera Presets (Isometric/Front/Top)
+│
+├── Sidebar
+│   ├── Printer Presets
+│   ├── Bin Presets
+│   ├── Bin List (with selection)
+│   ├── BinConfigurator (for selected bin)
+│   ├── Bill of Materials
+│   └── Layout Tools (Auto-fill, Optimize)
+│
+└── Canvas Area
+    ├── GridCanvas2D (2D interaction layer)
+    │   ├── Grid Lines & Cells
+    │   ├── Bin Rectangles (draggable/resizable)
+    │   ├── Placement Ghost (collision feedback)
+    │   └── Measurement Overlay
+    │
+    └── Viewport3D (3D preview)
+        ├── Three.js Scene
+        ├── Bin Meshes (generated via Web Worker)
+        ├── Dimension Labels
+        └── OrbitControls
+```
+
+## Data Flow
+
+The application uses a unidirectional data flow:
+
+1. **User interaction** → Component event handler
+2. **Component** → Updates Zustand store
+3. **Store** → Notifies all subscribers
+4. **Components** → Re-render with new state
+5. **For geometry changes**:
+   - Store → Web Worker (via `useManifoldWorker`)
+   - Worker → Manifold WASM CSG generation
+   - Worker → Returns mesh to main thread
+   - Main thread → Converts to Three.js geometry
+   - Viewport3D → Renders updated 3D preview
+
+## Key Design Patterns
+
+- **State Management**: Centralized Zustand store with undo/redo support
+- **Web Workers**: Heavy CSG operations run off the main thread
+- **CSG Pipeline**: Boolean operations build complex geometry from primitives
+- **Component Composition**: Small, focused components with clear responsibilities
+- **Hooks Pattern**: Custom hooks encapsulate complex logic (WASM, workers)

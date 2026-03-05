@@ -1,0 +1,338 @@
+---
+title: 'Export 3MF'
+description: 'Generate industry-standard 3MF files for PrusaSlicer, Cura, and Bambu Studio with watertight manifold meshes'
+icon: 'file-export'
+---
+
+Export your Gridfinity layout as 3MF files ready for slicing and 3D printing. All geometry is generated client-side using Manifold CSG for guaranteed watertight meshes.
+
+## Overview
+
+The 3MF export system converts your bin designs into industry-standard 3MF packages compatible with all modern slicers. Each export includes proper metadata for Bambu Studio integration and multi-object support.
+
+## Export Options
+
+<CardGroup cols={2}>
+  <Card title="Export Single Bin" icon="cube">
+    **Selected bin only**
+    - One bin geometry
+    - Positioned at world origin
+    - Filename: `gridfinity-bin-[WxDxH].3mf`
+    - Fast export (&lt;1 second)
+  </Card>
+  <Card title="Export All Bins" icon="cubes">
+    **Complete layout**
+    - All bins in scene
+    - Grid positions preserved
+    - Filename: `gridfinity-layout-[date].3mf`  
+    - Multi-object 3MF
+  </Card>
+</CardGroup>
+
+<Tip>
+  Use **Export All** to print an entire baseplate worth of bins in one slicing session.
+</Tip>
+
+## 3MF File Format
+
+The 3MF (3D Manufacturing Format) is a modern replacement for STL:
+
+### Format Structure
+
+```
+gridfinity-layout.3mf (ZIP archive)
+├── [Content_Types].xml          # MIME type mappings
+├── _rels/.rels                  # OPC relationships
+├── 3D/
+│   └── 3dmodel.model            # Mesh geometry (XML)
+└── Metadata/
+    ├── model_settings.config    # Bambu Studio metadata
+    ├── project_settings.config  # Project config
+    └── slice_info.config        # Slice metadata
+```
+
+### Why 3MF over STL?
+
+<CardGroup cols={2}>
+  <Card title="3MF Advantages" icon="circle-check">
+    - Multi-object support
+    - Embedded metadata
+    - Color/material info
+    - Native slicer integration
+    - Smaller file sizes (compressed)
+  </Card>
+  <Card title="STL Limitations" icon="circle-xmark">
+    - Single object only
+    - No metadata
+    - No color info
+    - Larger files (uncompressed)
+    - Requires manual positioning
+  </Card>
+</CardGroup>
+
+## Geometry Generation Pipeline
+
+Step-by-step process:
+
+1. **User clicks Export button**
+2. **Web Worker generates CSG meshes** for each bin
+   - Manifold WASM ensures watertight geometry
+   - Boolean operations (unions, subtractions) computed
+3. **Manifold mesh extracted**:
+   - Vertices: `Float32Array` of [x,y,z] coordinates
+   - Triangles: `Uint32Array` of [v0,v1,v2] indices
+4. **XML serialization**:
+   - `<vertices>` block with all vertex positions
+   - `<triangles>` block with face indices
+5. **3MF package assembly** (JSZip):
+   - Content types, relationships, metadata
+   - OPC (Open Packaging Convention) structure
+6. **ZIP compression** (DEFLATE)
+7. **Browser download** triggered
+
+<Accordion title="Example 3MF Mesh XML">
+  ```xml
+  <object id="1" type="model">
+    <mesh>
+      <vertices>
+        <vertex x="0.000000" y="0.000000" z="0.000000"/>
+        <vertex x="41.500000" y="0.000000" z="0.000000"/>
+        <vertex x="41.500000" y="41.500000" z="0.000000"/>
+        <!-- ... more vertices ... -->
+      </vertices>
+      <triangles>
+        <triangle v1="0" v2="1" v3="2"/>
+        <triangle v1="2" v2="3" v3="0"/>
+        <!-- ... more triangles ... -->
+      </triangles>
+    </mesh>
+  </object>
+  ```
+</Accordion>
+
+## Manifold CSG Engine
+
+Why Manifold ensures printable geometry:
+
+- **Watertight meshes**: No holes, gaps, or non-manifold edges
+- **Exact arithmetic**: No floating-point errors
+- **Robust booleans**: Unions and subtractions always succeed
+- **WASM performance**: Near-native C++ speed in browser
+
+<Note>
+  Manifold guarantees that every exported mesh is a valid, closed 2-manifold suitable for 3D printing.
+</Note>
+
+## Bambu Studio Integration
+
+### Optimized Metadata
+
+The exporter includes Bambu-specific config files:
+
+**model_settings.config**
+```xml
+<config>
+  <plate>
+    <metadata key="plater_id" value="1"/>
+    <metadata key="plater_name" value=""/>
+    <metadata key="locked" value="false"/>
+  </plate>
+</config>
+```
+
+**3dmodel.model (root element)**
+```xml
+<model unit="millimeter"
+  xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
+  xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"
+  xmlns:BambuStudio="http://schemas.bambulab.com/package/2021"
+  requiredextensions="p">
+  <metadata name="Application">BambuStudio-02.05.00.66</metadata>
+  <metadata name="BambuStudio:3mfVersion">2</metadata>
+  <!-- ... -->
+</model>
+```
+
+<Tip>
+  These metadata fields ensure Bambu Studio recognizes the file and opens it without warnings.
+</Tip>
+
+## Coordinate System
+
+Manifold uses Y-up (CAD convention), but Three.js uses Z-up (graphics convention). The export pipeline handles this:
+
+### Coordinate Transformation
+
+```typescript
+// Swap Y ↔ Z when transferring Manifold → Three.js
+for (let i = 0; i < positions.length; i += 3) {
+  const y = positions[i + 1];
+  positions[i + 1] = positions[i + 2]; // Y = old Z
+  positions[i + 2] = y;               // Z = old Y
+}
+```
+
+<Warning>
+  This transformation is automatic. Do not manually rotate models in the slicer—they will import with correct orientation.
+</Warning>
+
+## Multi-Object 3MF Structure
+
+Exporting all bins creates a multi-object 3MF:
+
+### Object Hierarchy
+
+Each bin requires **two objects**:
+
+1. **Volume object** (odd ID): Contains actual mesh
+2. **Parent object** (even ID): References volume + adds name
+
+```xml
+<object id="1" type="model">
+  <mesh><!-- vertices & triangles --></mesh>
+</object>
+<object id="2" type="model" name="Bin 2x3x4u">
+  <components>
+    <component objectid="1"/>
+  </components>
+</object>
+```
+
+### Build Items
+
+The `<build>` section lists all printable objects:
+
+```xml
+<build>
+  <item objectid="2" p:UUID="a1b2c3d4-..."/>
+  <item objectid="4" p:UUID="e5f6g7h8-..."/>
+  <!-- ... one item per bin ... -->
+</build>
+```
+
+<Note>
+  UUIDs are auto-generated for each build item to ensure slicer compatibility.
+</Note>
+
+## Slicer Compatibility
+
+Tested and working:
+
+<CardGroup cols={3}>
+  <Card title="Bambu Studio" icon="check">
+    Full support:
+    - Multi-object import
+    - Metadata recognition
+    - Auto-arrange on plate
+  </Card>
+  <Card title="PrusaSlicer" icon="check">
+    Full support:
+    - Multi-object import
+    - Instances and copies
+    - Auto-arrange
+  </Card>
+  <Card title="Cura" icon="check">
+    Full support:
+    - Multi-object import
+    - Group operations
+    - Per-object settings
+  </Card>
+</CardGroup>
+
+### Import Behavior
+
+- **Bambu Studio**: Opens with all bins on plate, ready to slice
+- **PrusaSlicer**: Imports all objects, may require auto-arrange
+- **Cura**: Imports as group, drag to separate if needed
+
+## File Naming Convention
+
+- **Single bin**: `gridfinity-bin-2x3x4u.3mf`
+  - Format: `gridfinity-bin-[W]x[D]x[H]u.3mf`
+- **All bins**: `gridfinity-layout-2024-03-15.3mf`
+  - Format: `gridfinity-layout-[YYYY-MM-DD].3mf`
+
+## Export Performance
+
+<CardGroup cols={2}>
+  <Card title="Single Bin" icon="gauge-high">
+    - Typical time: 0.5-1 second
+    - Depends on divider count
+    - Simple bins (&lt;0.5s)
+  </Card>
+  <Card title="Full Layout" icon="gauge">
+    - Typical time: 2-5 seconds
+    - Depends on bin count
+    - 10 bins: ~3 seconds
+  </Card>
+</CardGroup>
+
+<Tip>
+  Complex bins with many dividers take longer to generate. The Web Worker keeps the UI responsive during export.
+</Tip>
+
+## Privacy & Security
+
+<Note>
+  **Fully client-side**: All geometry generation and 3MF packaging happens in your browser. No server uploads, no data collection.
+</Note>
+
+- No internet connection required (after initial load)
+- Your designs never leave your device
+- Works offline (PWA mode)
+- No file size limits
+
+## Troubleshooting
+
+<Accordion title="File won't open in slicer">
+  **Possible causes**:
+  - Browser canceled download (check download folder)
+  - File corrupted during download (re-export)
+  - Slicer version too old (update to latest)
+
+  **Solution**: Ensure the file size is reasonable (>1KB) and try a different slicer.
+</Accordion>
+
+<Accordion title="Bins appear at wrong position">
+  This is expected—slicers may auto-arrange objects. Use the slicer's "Arrange" function to optimize plate layout.
+</Accordion>
+
+<Accordion title="Missing bins in exported file">
+  **Cause**: Only bins that successfully generate CSG meshes are included. Check the 3D preview for any wireframe placeholders (red boxes)—these indicate failed geometry.
+
+  **Solution**: Simplify the bin (reduce dividers, avoid extreme dimensions) and re-export.
+</Accordion>
+
+## Tips & Best Practices
+
+<Tip>
+  **Test print a single bin first** before exporting and printing an entire layout. Verify fit on your baseplate.
+</Tip>
+
+<Tip>
+  **Group similar bins** in your layout to take advantage of slicer's "duplicate" and "arrange" features.
+</Tip>
+
+<Tip>
+  **Check 3D preview** before exporting. If a bin shows as a red wireframe, it failed CSG generation and won't export.
+</Tip>
+
+## Technical Implementation
+
+- **Export module**: `src/gridfinity/export3mf.ts`
+- **3MF packaging**: JSZip library
+- **Mesh format**: Manifold → TriangleMesh adapter
+- **Compression**: DEFLATE (ZIP standard)
+- **XML generation**: Template strings with escaping
+- **UUID generation**: Crypto-random hex (RFC 4122 v4)
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="3D Preview" icon="cube" href="/features/3d-preview">
+    Verify geometry before exporting
+  </Card>
+  <Card title="Bin Configurator" icon="sliders" href="/features/bin-configurator">
+    Configure bin parameters for export
+  </Card>
+</CardGroup>

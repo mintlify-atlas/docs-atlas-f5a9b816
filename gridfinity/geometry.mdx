@@ -1,0 +1,212 @@
+---
+title: Bin Geometry
+description: Understanding Gridfinity bin structure, profiles, and geometry generation
+---
+
+## Overview
+
+Gridfinity bins are generated using CSG (Constructive Solid Geometry) operations with the Manifold WASM engine. Each bin is built through a series of boolean operations to create the final printable mesh.
+
+## Base Profile
+
+The base profile is the foundation of every Gridfinity bin, providing interlocking with baseplates.
+
+### Z-Profile Structure
+
+The base consists of a **5-layer stepped profile** from Z=0 to Z=4.75mm:
+
+| Layer | Z Start | Height | Width Shrink (Bottom) | Width Shrink (Top) | Corner Radius Shrink |
+|-------|---------|--------|----------------------|-------------------|---------------------|
+| 1 | 0.00 mm | 0.80 mm | 4.40 mm | 4.40 mm | 2.20 mm |
+| 2 | 0.80 mm | 0.80 mm | 4.40 mm | 2.80 mm | 2.20 mm |
+| 3 | 1.60 mm | 0.55 mm | 2.80 mm | 2.80 mm | 1.40 mm |
+| 4 | 2.15 mm | 0.80 mm | 2.80 mm | 1.20 mm | 1.40 mm |
+| 5 | 2.95 mm | 1.80 mm | 0.00 mm | 0.00 mm | 0.00 mm |
+
+- **Layer 5** is a full-width slab (no shrink) from Z=2.95 to Z=4.75mm
+- **Layers 1-4** create the stepped chamfer profile for baseplate interlocking
+- Each layer uses a tapered extrusion where top and bottom widths differ
+
+### Per-Cell Base Generation
+
+For multi-cell bins:
+- Each cell gets its own complete Z-profile base
+- Cells are positioned at 42mm spacing
+- A full-width slab bridges the inter-cell gaps at Z=2.95→4.75mm
+- This ensures proper interlocking across the entire bin footprint
+
+Implementation reference: `src/gridfinity/binGeometry.ts:427-493`
+
+## Body Geometry
+
+The bin body sits on top of the base profile, starting at Z=4.75mm.
+
+### Dimensions
+
+```typescript
+// Outer dimensions
+outerWidth = (cellsW × 42mm) - 0.5mm tolerance
+outerDepth = (cellsD × 42mm) - 0.5mm tolerance
+bodyHeight = heightUnits × 7mm
+
+// Inner cavity
+innerWidth = outerWidth - (2 × wallThickness)
+innerDepth = outerDepth - (2 × wallThickness)
+cavityHeight = bodyHeight - bottomThickness
+```
+
+### Corner Radius
+
+- **Default:** 3.75mm (official Gridfinity specification)
+- **Range:** 0mm (sharp) to 3.75mm (standard)
+- **Inner radius:** `max(0, cornerRadius - wallThickness)`
+- Corner radius is clamped to prevent exceeding bin dimensions
+
+### Wall & Bottom Thickness
+
+| Parameter | Default | Purpose |
+|-----------|---------|----------|
+| Wall thickness | 1.2 mm | Vertical walls (fits 3 perimeters with 0.4mm nozzle) |
+| Bottom thickness | 0.8 mm | Floor of cavity (fits 4 layers at 0.2mm) |
+
+These values provide structural strength while keeping bins lightweight and print-friendly.
+
+Implementation reference: `src/gridfinity/binGeometry.ts:250-279`
+
+## Features
+
+### Stacking Lip
+
+The stacking lip allows bins to stack vertically with alignment:
+- **Height:** 4.4mm (constant `GF.STACKING_LIP_HEIGHT`)
+- **Profile:** Mirrors the baseplate socket profile
+- **Location:** Added to the top rim of the bin
+- Prevents bins from sliding when stacked
+
+### Label Shelf
+
+A 45-degree angled cutout on the front wall for labels:
+- **Angle:** 45 degrees (constant `GF.LABEL_ANGLE`)
+- **Default width:** 12mm (constant `GF.LABEL_DEFAULT_WIDTH`)
+- **Configurable:** Can be adjusted per bin
+- **Geometry:** Wedge-shaped cutout that tapers from full depth at rim to outer face
+
+The label shelf is created by subtracting a tapered wedge:
+- Full cut at the rim (bodyTopZ)
+- Tapers to outer wall face at `bodyTopZ - shelfHeight`
+- Extends across the full bin width
+
+Implementation reference: `src/gridfinity/binGeometry.ts:151-210`
+
+### Magnet Holes
+
+- **Diameter:** 6mm + 0.5mm clearance = **6.5mm actual**
+- **Depth:** 2mm + 0.4mm clearance = **2.4mm actual**
+- **Position:** 4 holes per cell at each corner
+- **Inset:** Calculated to clear corner radius: `max(8.0, cornerRadius + holeRadius + 1.0)`
+- **Deduplication:** Internal corners in multi-cell bins share holes (no duplicates)
+
+Implementation reference: `src/gridfinity/binGeometry.ts:115-131`
+
+### Screw Holes
+
+- **Diameter:** 3.2mm (M3 clearance)
+- **Depth:** Through base (4.75mm)
+- **Position:** 4 holes per cell at each corner
+- **Inset:** Same calculation as magnet holes
+- **Purpose:** Alternative attachment method for non-magnetic baseplates
+
+Implementation reference: `src/gridfinity/binGeometry.ts:133-148`
+
+## Interior Dividers
+
+Dividers create compartments within a bin:
+
+### Configuration
+
+- **dividersX:** Number of vertical walls parallel to Y-axis (divide X span)
+- **dividersY:** Number of vertical walls parallel to X-axis (divide Y span)
+- **Range:** 0 to 9 per axis
+- **Thickness:** Same as wall thickness (1.2mm default)
+- **Height:** Full cavity height
+
+### Spacing
+
+Dividers are evenly spaced across the inner cavity:
+```typescript
+// X dividers (vertical walls dividing width)
+for (let i = 1; i <= dividersX; i++) {
+  x = -innerW/2 + (innerW / (dividersX + 1)) × i
+}
+
+// Y dividers (vertical walls dividing depth)
+for (let i = 1; i <= dividersY; i++) {
+  y = -innerD/2 + (innerD / (dividersY + 1)) × i
+}
+```
+
+Example: A 2x2 bin with 3 X-dividers and 3 Y-dividers creates a 4x4 grid of compartments.
+
+Implementation reference: `src/gridfinity/binGeometry.ts:213-246`
+
+## Multi-Cell Bins
+
+Bins spanning multiple grid cells follow these rules:
+
+### Cell Spacing
+
+- Cells are positioned at **42mm intervals** along X and Y axes
+- Each cell is centered relative to the bin center
+- Offset calculation: `(cellIndex - (cellCount - 1) / 2) × 42mm`
+
+### Base Profile Generation
+
+1. Generate individual Z-profile bases for each cell
+2. Position each base at its cell offset
+3. Union all cell bases together
+4. Add a full-width slab to bridge inter-cell gaps (Z=2.95→4.75mm)
+
+### Hole Deduplication
+
+Internal corners between cells in multi-cell bins:
+- Have only **one set of holes** (not duplicated)
+- Use position rounding (0.01mm precision) to detect overlaps
+- Prevents interference and unnecessary geometry
+
+Example: A 2x2 bin has:
+- 4 corner holes at outer corners
+- 1 shared hole at the center
+- Total: 5 hole positions (not 16)
+
+Implementation reference: `src/gridfinity/binGeometry.ts:87-113`
+
+## Geometry Pipeline
+
+### CSG Algorithm
+
+Each bin is built through boolean operations:
+
+1. **Base** — Per-cell Z-profile bases + full-width slab
+2. **Outer shell** — Rounded box for body dimensions
+3. **Inner cavity** — Subtracted to create hollow interior
+4. **Union** — Base + hollow body
+5. **Subtract** — Magnet holes, screw holes, label shelf
+6. **Add** — Interior dividers, stacking lip
+
+### Preview vs Export
+
+**Preview geometry** (for 3D viewport):
+- Simplified flat base (single slab, Z=0→4.75mm)
+- Faster generation for real-time interaction
+- Includes all features for visual accuracy
+
+**Export geometry** (for 3MF files):
+- Full 5-layer Z-profile base per cell
+- Exact dimensions for printing
+- Manifold watertight meshes
+
+Implementation reference: `src/gridfinity/binGeometry.ts:388-538`
+
+<Note>
+  All geometry is generated using the Manifold WASM CSG engine, ensuring watertight, printable meshes for 3D printing.
+</Note>

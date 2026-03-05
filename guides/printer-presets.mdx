@@ -1,0 +1,123 @@
+---
+title: Printer Presets
+description: Choose the right baseplate size for your 3D printer
+---
+
+Gridfinity Builder includes presets for popular 3D printers to help you design layouts that fit perfectly on your build plate.
+
+## Available Presets
+
+Each preset configures the grid size to match your printer's build volume:
+
+| Printer | Grid Size | Real Dimensions | Notes |
+|---------|-----------|-----------------|-------|
+| **Bambu Lab A1** | 6 x 6 | 252 x 252 mm | Default preset, fits most common layouts |
+| **Bambu Lab A1 Mini** | 4 x 4 | 168 x 168 mm | Compact printer, smaller baseplates |
+| **Bambu Lab P1S** | 6 x 6 | 252 x 252 mm | Same as A1 |
+| **Bambu Lab X1C** | 6 x 6 | 252 x 252 mm | Professional printer, same volume as P1S |
+| **Bambu Lab X1E** | 6 x 6 | 252 x 252 mm | Engineering filaments, same volume |
+| **Bambu Lab H2D** | 6 x 6 | 252 x 252 mm | High-speed printer, same volume |
+| **19" Server Rack** | 10 x 8 | 420 x 336 mm | Wide format for rack-mount trays |
+| **Custom** | 8 x 8 | 336 x 336 mm | Start with 8x8, then adjust to your needs |
+
+<Tip>
+The **Bambu Lab A1** is set as the default preset (6x6 grid). It's a good starting point for most users.
+</Tip>
+
+## How to Use Presets
+
+1. **Select a preset** from the baseplate configuration panel in the sidebar
+2. **Design your layout** within the grid boundaries
+3. **Export as 3MF** when ready to print
+
+The grid boundaries in the 2D view show exactly what will fit on your printer's build plate.
+
+## Understanding Grid Dimensions
+
+Each grid cell represents one Gridfinity unit:
+
+- **Cell size**: 42 x 42 mm (including tolerance)
+- **Height unit**: 7 mm (1u = 7mm tall)
+- **Inter-cell gap**: 0.5 mm
+
+### Calculation Example
+
+For a 6x6 grid (Bambu Lab A1):
+
+```
+Width = (6 cells × 42mm) = 252mm
+Height = (6 cells × 42mm) = 252mm
+```
+
+## Custom Baseplate Sizing
+
+If your printer isn't in the preset list, use the **Custom** option:
+
+1. Select **Custom** from the preset dropdown
+2. Enter your desired **columns** (width in cells)
+3. Enter your desired **rows** (depth in cells)
+4. The real dimensions are calculated automatically
+
+<Tip>
+To find your maximum grid size, divide your printer's build plate dimensions by 42mm. For example, a 210x210mm printer can fit a 5x5 grid (210 ÷ 42 = 5).
+</Tip>
+
+### Custom Sizing Tips
+
+- **Leave margin**: Subtract 5-10mm from your build plate size to ensure the baseplate fits comfortably
+- **Consider nozzle clearance**: Some printers have restricted corners or edges
+- **Test small first**: Print a single 1x1 bin to verify your calibration before printing large baseplates
+
+## Multi-Baseplate Layouts
+
+For layouts larger than your printer, you can:
+
+1. **Split across multiple baseplates**: Design a large layout, then export bins in groups
+2. **Print separate sections**: Export bins for different areas, print them separately
+3. **Join baseplates**: Some users 3D print connectors to join multiple baseplates
+
+<Tip>
+For very large layouts (10x10+), consider breaking them into 6x6 sections. This makes printing more manageable and lets you organize by category.
+</Tip>
+
+## Printer-Specific Notes
+
+### Bambu Lab Printers
+
+All Bambu Lab presets are optimized for their multi-color printing capabilities:
+
+- Export 3MF files open directly in Bambu Studio
+- Bins are positioned automatically on the virtual build plate
+- Use the A1 Mini preset for faster test prints
+
+### 19" Rack Trays
+
+The **19" Server Rack** preset (10x8) is designed for:
+
+- Network equipment organization
+- 1U rack-mount trays
+- Server room cable management
+- Data center small parts storage
+
+<Tip>
+For rack trays, use the [Server Rack 1U layout template](/guides/layout-templates#server-rack-1u) to get started quickly.
+</Tip>
+
+## Changing Presets Mid-Design
+
+<Warning>
+Changing presets **does not** automatically remove bins that exceed the new grid size. You'll need to manually delete or reposition any bins that fall outside the new boundaries.
+</Warning>
+
+When switching presets:
+
+1. Review your current layout
+2. Note any bins that might exceed the new size
+3. Select the new preset
+4. Use **Optimize Layout** to automatically repack bins if needed
+
+## Next Steps
+
+- Try the [Auto-Fill tool](/features/auto-fill) to quickly populate your baseplate
+- Explore [Layout Templates](/guides/layout-templates) for common use cases
+- Learn about [3MF Export](/features/export) to prepare files for printing

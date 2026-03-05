@@ -1,0 +1,292 @@
+---
+title: Docker Development
+description: Run Gridfinity Builder in a containerized environment
+icon: 'docker'
+---
+
+## Overview
+
+Gridfinity Builder includes Docker support for consistent development environments across different platforms. The Docker setup uses Docker Compose for easy orchestration.
+
+## Prerequisites
+
+- **Docker** 20.10+
+- **Docker Compose** 2.0+ (included with Docker Desktop)
+
+## Quick Start
+
+<Steps>
+  <Step title="Build the Docker image">
+    Build the image with no cache to ensure fresh dependencies:
+
+    ```bash
+    docker compose build --no-cache
+    ```
+
+    This will:
+    - Use Node.js 20 Alpine base image
+    - Install npm dependencies
+    - Copy source files
+    - Configure the development server
+  </Step>
+
+  <Step title="Start the container">
+    Start the application in detached mode:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    The `-d` flag runs the container in the background.
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:5173
+    ```
+  </Step>
+</Steps>
+
+## Dockerfile
+
+The Dockerfile uses a multi-stage approach optimized for development:
+
+```dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files first for better layer caching
+COPY package.json package-lock.json* ./
+
+RUN npm install
+
+# Copy the rest of the source
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+```
+
+**Key features:**
+- **Alpine Linux** - Minimal image size (~150MB vs 1GB+)
+- **Layer caching** - Package files copied separately for faster rebuilds
+- **Host binding** - `--host 0.0.0.0` allows external connections
+- **Port 5173** - Vite's default development port
+
+## Docker Compose Configuration
+
+The `docker-compose.yml` orchestrates the development environment:
+
+```yaml
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      no_cache: true
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+```
+
+### Port Mappings
+
+| Host Port | Container Port | Purpose |
+|-----------|----------------|----------|
+| 5173 | 5173 | Vite development server |
+
+### Volume Mounts
+
+The following directories are mounted for hot reload:
+
+- **`./src`** - Application source code
+- **`./public`** - Static assets (icons, etc.)
+- **`index.html`** - Entry HTML file
+- **`vite.config.ts`** - Vite configuration
+- **`tailwind.config.ts`** - Tailwind CSS config
+- **`tsconfig.json`** - TypeScript configuration
+
+<Note>
+  Volume mounts enable hot module replacement (HMR). Changes to mounted files are immediately reflected in the running container.
+</Note>
+
+## Common Commands
+
+### View logs
+
+```bash
+# Follow logs in real-time
+docker compose logs -f
+
+# View last 100 lines
+docker compose logs --tail=100
+```
+
+### Restart the container
+
+```bash
+docker compose restart
+```
+
+### Stop the container
+
+```bash
+docker compose down
+```
+
+### Rebuild and restart
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Execute commands inside container
+
+```bash
+# Open a shell
+docker compose exec app sh
+
+# Install a new package
+docker compose exec app npm install <package-name>
+
+# Run TypeScript compiler
+docker compose exec app npm run build
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Container fails to start">
+    Check container logs for errors:
+
+    ```bash
+    docker compose logs app
+    ```
+
+    Common issues:
+    - Port 5173 already in use on host
+    - npm install failed (check network/registry)
+    - Missing `package-lock.json`
+  </Accordion>
+
+  <Accordion title="Hot reload not working">
+    If file changes aren't reflected:
+
+    1. **Check volume mounts:**
+       ```bash
+       docker compose config
+       ```
+
+    2. **Verify file polling is enabled:**
+       The `vite.config.ts` includes `usePolling: true` for Docker compatibility.
+
+    3. **Restart the container:**
+       ```bash
+       docker compose restart
+       ```
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    If port 5173 is occupied:
+
+    ```yaml
+    # Edit docker-compose.yml
+    ports:
+      - "3000:5173"  # Map host port 3000 to container port 5173
+    ```
+
+    Access the app at `http://localhost:3000`.
+  </Accordion>
+
+  <Accordion title="Permission issues on Linux">
+    Files created by the container may have root ownership:
+
+    ```bash
+    # Fix ownership (replace 1000:1000 with your UID:GID)
+    sudo chown -R 1000:1000 .
+    ```
+
+    Or add to `docker-compose.yml`:
+    ```yaml
+    user: "${UID}:${GID}"
+    ```
+  </Accordion>
+
+  <Accordion title="Build fails with network errors">
+    If npm install times out:
+
+    ```bash
+    # Use a different npm registry
+    docker compose exec app npm config set registry https://registry.npmmirror.com
+    
+    # Or rebuild with build args
+    docker compose build --build-arg NPM_REGISTRY=https://registry.npmmirror.com
+    ```
+  </Accordion>
+
+  <Accordion title="WASM module fails to load">
+    Ensure the container has sufficient memory:
+
+    ```yaml
+    # Add to docker-compose.yml
+    services:
+      app:
+        deploy:
+          resources:
+            limits:
+              memory: 4G
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Production Build in Docker
+
+To build a production-ready image:
+
+```dockerfile
+# Create a production Dockerfile.prod
+FROM node:20-alpine AS build
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+```bash
+docker build -f Dockerfile.prod -t gridfinity-builder:prod .
+docker run -p 8080:80 gridfinity-builder:prod
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Local Setup" icon="laptop-code" href="/development/local-setup">
+    Set up without Docker for faster iteration
+  </Card>
+  <Card title="Building for Production" icon="box" href="/development/building">
+    Create optimized production builds
+  </Card>
+</CardGroup>

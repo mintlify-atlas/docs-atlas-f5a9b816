@@ -1,0 +1,177 @@
+---
+title: Geometry Pipeline
+description: How geometry flows from user configuration to 3D mesh in the viewport
+---
+
+The geometry pipeline transforms bin configuration parameters into watertight 3D meshes ready for rendering or export. This pipeline leverages Web Workers to keep the UI responsive during heavy computation.
+
+## Pipeline Overview
+
+The geometry generation follows this flow:
+
+<Steps>
+  <Step title="User changes bin config">
+    User modifies parameters like dimensions, wall thickness, dividers, or features via the UI
+  </Step>
+  
+  <Step title="Zustand store updates">
+    Configuration changes trigger state mutations in the central Zustand store
+  </Step>
+  
+  <Step title="Web Worker receives config">
+    Updated configuration is posted to `manifoldWorker.ts` as a serializable message
+  </Step>
+  
+  <Step title="Manifold WASM generates CSG mesh">
+    Worker thread executes Constructive Solid Geometry operations to build the mesh
+  </Step>
+  
+  <Step title="Mesh transferred back to main thread">
+    Vertex positions and triangle indices are sent back using Transferable Objects (zero-copy)
+  </Step>
+  
+  <Step title="Converted to Three.js BufferGeometry">
+    Mesh data is wrapped in Three.js geometry format and added to the scene
+  </Step>
+  
+  <Step title="3D viewport updates in real-time">
+    Three.js renderer displays the new geometry with PBR materials, lighting, and camera controls
+  </Step>
+</Steps>
+
+## Worker Communication Protocol
+
+The main thread and worker communicate via structured messages. Here's the interface from `manifoldWorker.ts:33-38`:
+
+```typescript
+const { type, config, requestId } = e.data as {
+  type: 'preview' | 'export';
+  config: BinConfig;
+  requestId: string;
+};
+```
+
+### Request Types
+
+- **`preview`**: Generates simplified geometry for real-time viewport display (flat base, no detailed Z-profile)
+- **`export`**: Generates full-fidelity geometry with accurate Gridfinity base profile for 3D printing
+
+## Request Management
+
+The `useManifoldWorker.ts` hook provides request queuing and caching:
+
+```typescript useManifoldWorker.ts:41-60
+export function requestMesh(
+  mode: 'preview' | 'export',
+  config: BinConfig,
+): Promise<MeshResult> {
+  const hash = mode + ':' + configHash(config);
+  const cached = meshCache.get(hash);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve, reject) => {
+    const requestId = `req_${++idCounter}`;
+    pending.set(requestId, {
+      resolve: (result) => {
+        meshCache.set(hash, result);
+        resolve(result);
+      },
+      reject,
+    });
+    getWorker().postMessage({ type: mode, config, requestId });
+  });
+}
+```
+
+### Caching Strategy
+
+<CodeGroup>
+```typescript Configuration Hashing
+function configHash(config: BinConfig): string {
+  return JSON.stringify(config);
+}
+```
+
+```typescript Cache Lookup
+const hash = mode + ':' + configHash(config);
+const cached = meshCache.get(hash);
+if (cached) return Promise.resolve(cached);
+```
+</CodeGroup>
+
+Geometry is cached by configuration hash, so identical bins reuse existing meshes without recomputation.
+
+## Request Cancellation
+
+For interactive editing, outdated requests are cancelled to avoid race conditions (`useManifoldWorker.ts:78-80`):
+
+```typescript
+const prev = activeBinRequests.get(binId);
+if (prev) pending.delete(prev);
+```
+
+This ensures that only the most recent request for a bin completes, discarding intermediate states.
+
+## Mesh Extraction
+
+The worker extracts raw vertex and index data from Manifold's internal mesh format (`manifoldWorker.ts:15-31`):
+
+```typescript
+function extractMesh(manifoldObj: any): { positions: Float32Array; indices: Uint32Array } {
+  const mesh = manifoldObj.getMesh();
+  const numVert: number = mesh.numVert;
+  const numProp: number = mesh.numProp;
+  const vertProps: Float32Array = mesh.vertProperties;
+  const triVerts: Uint32Array = mesh.triVerts;
+
+  const positions = new Float32Array(numVert * 3);
+  for (let i = 0; i < numVert; i++) {
+    const offset = i * numProp;
+    positions[i * 3] = vertProps[offset];
+    positions[i * 3 + 1] = vertProps[offset + 1];
+    positions[i * 3 + 2] = vertProps[offset + 2];
+  }
+
+  return { positions, indices: new Uint32Array(triVerts) };
+}
+```
+
+Manifold stores vertex properties interleaved (x, y, z, nx, ny, nz, ...). This function extracts only position data for Three.js.
+
+## Transferable Objects
+
+Mesh buffers are transferred using the [Transferable Objects API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for zero-copy performance (`manifoldWorker.ts:50-53`):
+
+```typescript
+(self as any).postMessage(
+  { type: 'mesh', requestId, positions, indices },
+  [positions.buffer, indices.buffer],
+);
+```
+
+The `ArrayBuffer` underlying each `TypedArray` is transferred to the main thread without copying, drastically improving performance for large meshes.
+
+## Preview vs Export Geometry
+
+Two geometry generation functions exist in `binGeometry.ts`:
+
+| Function | Purpose | Base Detail | Use Case |
+|----------|---------|-------------|----------|
+| `generateBinPreview` | Real-time viewport | Flat slab (0→4.75mm) | Interactive editing |
+| `generateBinExport` | 3MF file output | Full 5-layer Z-profile | 3D printing |
+
+Preview geometry uses a simplified flat base for faster generation, while export geometry includes the precise stepped base profile required for Gridfinity baseplate interlocking.
+
+## Error Handling
+
+If geometry generation fails, the worker posts an error message back to the main thread (`manifoldWorker.ts:54-59`):
+
+```typescript
+(self as any).postMessage({
+  type: 'error',
+  requestId,
+  error: String(err),
+});
+```
+
+The `useManifoldWorker` hook resolves promises with errors, allowing components to gracefully handle failures.

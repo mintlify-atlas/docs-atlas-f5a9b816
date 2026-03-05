@@ -1,0 +1,116 @@
+---
+title: Architecture Overview
+description: High-level architecture and component design of Gridfinity Builder
+---
+
+Gridfinity Builder is a browser-based parametric CAD tool built with modern web technologies. The application uses a reactive state management system and offloads heavy geometry computation to Web Workers for optimal performance.
+
+## Project Structure
+
+The codebase follows a modular architecture with clear separation of concerns:
+
+```
+src/
+├── main.tsx                     # Entry point
+├── App.tsx                      # Layout: Toolbar + Sidebar + Canvas
+│
+├── store/
+│   └── useStore.ts              # Zustand store (bins, grid, undo/redo)
+│
+├── components/
+│   ├── Toolbar.tsx              # Top bar: view modes, export, camera
+│   ├── Sidebar.tsx              # Left panel: presets, bin list, BOM, tools
+│   ├── GridCanvas2D.tsx         # 2D SVG grid with all interactions
+│   ├── BinConfigurator.tsx      # Bin parameter editor
+│   └── Viewport3D.tsx           # Three.js 3D preview
+│
+├── gridfinity/
+│   ├── constants.ts             # Gridfinity dimensions & presets
+│   ├── binGeometry.ts           # Manifold CSG bin generation
+│   ├── baseplateGeometry.ts     # Manifold CSG baseplate generation
+│   ├── profiles.ts              # Z-profile cross sections
+│   └── export3mf.ts             # 3MF packaging (JSZip + XML)
+│
+├── hooks/
+│   ├── useManifold.ts           # WASM initialization
+│   └── useManifoldWorker.ts     # Web Worker interface
+│
+├── workers/
+│   └── manifoldWorker.ts        # Background geometry generation
+│
+└── utils/
+    ├── collision.ts             # AABB collision detection
+    ├── gridMath.ts              # Screen <-> Grid coordinate math
+    └── meshToThree.ts           # Manifold mesh -> Three.js geometry
+```
+
+## Component Architecture
+
+The main application layout is defined in `App.tsx:47-85`, which orchestrates the view hierarchy:
+
+<Steps>
+  <Step title="Toolbar">
+    Top navigation bar providing view mode controls (2D, 3D, split), camera presets, and export buttons
+  </Step>
+  
+  <Step title="Sidebar">
+    Left panel containing bin presets, active bin list, bill of materials, and utility tools (auto-fill, optimize, print labels)
+  </Step>
+  
+  <Step title="Canvas Area">
+    Dynamic split view that can show:
+    - **2D Mode**: Interactive SVG grid (`GridCanvas2D`)
+    - **3D Mode**: Three.js viewport (`Viewport3D`)
+    - **Split Mode**: Both views side-by-side with draggable divider
+  </Step>
+</Steps>
+
+The split view implements a custom resize handler (`App.tsx:15-44`) that allows users to adjust the viewport ratio by dragging the divider.
+
+## State Management with Zustand
+
+Gridfinity Builder uses [Zustand](https://github.com/pmndrs/zustand) for centralized state management. The store (`store/useStore.ts`) manages:
+
+- **Bin Collection**: Array of bin configurations with unique IDs
+- **Grid Settings**: Baseplate dimensions, printer presets
+- **View State**: Active view mode, selected bin, camera settings
+- **History**: Undo/redo stack for user actions
+
+Components consume state using Zustand selectors for optimal re-rendering:
+
+```tsx App.tsx:9
+const viewMode = useStore((s) => s.viewMode);
+```
+
+This pattern ensures that components only re-render when their specific slice of state changes, maintaining smooth performance even with complex 3D scenes.
+
+## Data Flow
+
+The application follows a unidirectional data flow:
+
+1. **User Input** → Component event handlers
+2. **State Update** → Zustand store mutation
+3. **Reactive Listeners** → Components observe state changes
+4. **Side Effects** → Geometry regeneration triggered via Web Worker
+5. **View Update** → 2D/3D viewports reflect new state
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| UI Framework | React 18 with TypeScript |
+| State Management | Zustand |
+| 2D Rendering | SVG (native browser) |
+| 3D Rendering | Three.js with OrbitControls |
+| CAD Engine | Manifold WASM (CSG operations) |
+| File Export | JSZip (3MF packaging) |
+| Build Tool | Vite |
+| PWA | Vite PWA Plugin with Workbox |
+
+## Performance Characteristics
+
+- **Client-Side Only**: All computation runs in the browser, no server required
+- **Offline-First**: PWA architecture with Service Worker caching
+- **Non-Blocking**: Heavy CSG operations run in Web Worker threads
+- **Cached Geometry**: Mesh results cached by configuration hash to avoid redundant computation
+- **Transferable Objects**: Mesh buffers transferred between worker and main thread with zero-copy semantics

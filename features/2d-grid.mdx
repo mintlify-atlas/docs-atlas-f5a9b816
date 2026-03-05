@@ -1,0 +1,216 @@
+---
+title: '2D Grid Canvas'
+description: 'Interactive 2D layout editor with drag-and-drop, collision detection, and real-time visual feedback'
+icon: 'grid-2'
+---
+
+The 2D Grid Canvas is the main layout editor where you design your Gridfinity bin arrangements with a CAD-style interface.
+
+## Overview
+
+Design your layout on a pannable, zoomable 2D grid with real-time visual feedback. The canvas provides intuitive controls for positioning, resizing, and configuring bins with snap-to-grid behavior and collision prevention.
+
+## Core Features
+
+### Pan & Zoom
+
+<CardGroup cols={2}>
+  <Card title="Pan" icon="hand">
+    - **Middle mouse button** to pan
+    - **Shift + Left click** for multi-select (not pan)
+    - Smooth panning with precise control
+  </Card>
+  <Card title="Zoom" icon="magnifying-glass">
+    - **Mouse wheel** to zoom in/out
+    - Range: 0.2x to 5x magnification
+    - Zoom centers on cursor position
+  </Card>
+</CardGroup>
+
+### Drag & Drop Bins
+
+Place and move bins with intelligent collision detection:
+
+- **Click and drag** any bin to reposition it
+- **Drag threshold** (5px) prevents accidental moves
+- **Ghost preview** shows new position during drag
+  - Green outline = valid placement
+  - Red outline = collision detected
+- **Snap-back animation** when drop is rejected
+- **Original position** shown as dotted outline during drag
+
+<Tip>
+  Bins snap to grid cells automatically. All positions are cell-aligned for perfect Gridfinity spacing.
+</Tip>
+
+### Resize Handles
+
+Grow or shrink bins by dragging edge handles (single selection only):
+
+- **4 edge handles**: East, West, North, South
+- Drag any handle to resize in that direction
+- Ghost preview shows new dimensions
+- Collision detection prevents invalid sizes
+- Minimum size: 1x1 cell
+- Maximum size: 10x10 cells
+
+### Rotate Handle
+
+Swap width and depth for non-square bins:
+
+- **Rotate handle** appears at top-right corner (single selection only)
+- Only visible when W ≠ D
+- Click to instantly swap dimensions
+- Validates collision before rotating
+- Keyboard shortcut: `R`
+
+<Note>
+  Rotation is a 90° swap operation (not free rotation). This maintains proper Gridfinity grid alignment.
+</Note>
+
+## Interior Dividers
+
+Add wall-to-wall dividers directly from the grid:
+
+- **+/− controls** appear when bin is selected
+- **X dividers** (vertical): control at bottom edge
+- **Y dividers** (horizontal): control at right edge
+- Range: 0-9 dividers per axis
+- Dividers shown as dashed lines on grid
+- Real-time 3D preview updates
+
+## Measurement Overlay
+
+CAD-style dimension annotations show real-world measurements:
+
+### Grid Dimensions
+- Total baseplate width and depth in mm
+- Displayed at top and left edges
+- Always visible for reference
+
+### Bin Dimensions
+- Hover over any bin to see its measurements
+- Width, depth, and height labels
+- Selected bin shows bold accent-colored dimensions
+- All measurements account for Gridfinity tolerance (0.5mm)
+
+<Accordion title="Example Measurements">
+  A 2x3x4u bin displays:
+  - Width: 83.5mm (2 × 42mm - 0.5mm tolerance)
+  - Depth: 125.5mm (3 × 42mm - 0.5mm tolerance)  
+  - Height: 32.75mm (4 × 7mm + 4.75mm base)
+</Accordion>
+
+## Placement Modes
+
+### Placing Mode
+
+Activated when adding a new bin from presets or configurator:
+
+- **Crosshair cursor** follows mouse
+- **Green/red ghost** shows valid/invalid placement
+- **Click to place** at cursor position
+- **R key** to rotate ghost before placing
+- **Escape** to cancel
+
+### Selection Modes
+
+<CardGroup cols={2}>
+  <Card title="Single Select" icon="arrow-pointer">
+    Click any bin to select it. Shows:
+    - Accent-colored border
+    - Pulsing glow effect
+    - Resize handles
+    - Divider controls
+    - Rotate handle (if W ≠ D)
+  </Card>
+  <Card title="Multi-Select" icon="objects-column">
+    **Shift + Click** to add/remove from selection:
+    - Multiple bins highlighted
+    - No resize/rotate handles
+    - Bulk operations supported
+    - **Ctrl+A** to select all
+  </Card>
+</CardGroup>
+
+## Visual Feedback
+
+### Color Coding
+
+- **Bin fill**: Semi-transparent with custom color
+- **Selection**: Accent-colored border + glow
+- **Valid ghost**: Green (`#00d4aa`)
+- **Invalid ghost**: Red (`#ff4466`)
+- **Group indicator**: Small dot at top-left
+
+### Grid Elements
+
+- **Cell grid**: Dashed lines for individual cells
+- **Border**: Solid line for baseplate edge
+- **Column/row labels**: 0-indexed coordinates
+- **Hover highlight**: Subtle cell highlight in idle mode
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `R` | Rotate selected bin (swap W and D) |
+| `Delete` / `Backspace` | Remove selected bin(s) |
+| `Escape` | Cancel placing / dragging / resizing |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Shift+Z` | Redo |
+| `Ctrl+A` | Select all bins |
+| `Shift + Left Click` | Multi-select |
+| `Middle Mouse` | Pan the grid |
+| `Scroll Wheel` | Zoom (0.2x to 5x) |
+
+<Warning>
+  Keyboard shortcuts are disabled when typing in input fields to prevent accidental deletions.
+</Warning>
+
+## Drag & Drop from Sidebar
+
+Drop preset bins directly onto the grid:
+
+1. Drag a preset from the sidebar
+2. Ghost preview follows cursor on grid
+3. Drop to place (with collision check)
+4. Preset configuration applied instantly
+
+## Tips & Best Practices
+
+<Tip>
+  **Zoom in** (scroll up) for precise placement and editing. **Zoom out** (scroll down) to see the full layout.
+</Tip>
+
+<Tip>
+  Use the **measurement overlay** to verify real-world dimensions before exporting to 3MF.
+</Tip>
+
+<Tip>
+  **Group bins** by function (Tools, Electronics, etc.) to see color-coded dots for easy identification.
+</Tip>
+
+<Note>
+  The grid enforces Gridfinity's 42mm cell spacing and prevents overlapping bins automatically.
+</Note>
+
+## Technical Details
+
+- Built with SVG for crisp rendering at any zoom level
+- Real-time collision detection using AABB algorithm
+- Smooth animations for snap-back and camera movements
+- Cell size: 42mm (Gridfinity standard)
+- Snap-back animation duration: 300ms
+- Drag threshold: 5px (prevents accidental moves)
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="3D Preview" icon="cube" href="/features/3d-preview">
+    See your grid layout rendered in real-time 3D
+  </Card>
+  <Card title="Bin Configurator" icon="sliders" href="/features/bin-configurator">
+    Edit detailed parameters for selected bins
+  </Card>
+</CardGroup>

@@ -1,0 +1,298 @@
+---
+title: '3D Preview'
+description: 'Real-time 3D rendering with multiple view modes, camera presets, and section views powered by Three.js'
+icon: 'cube'
+---
+
+The 3D Preview viewport renders your bins in real-time as you design, powered by Three.js and the Manifold WASM CSG engine for accurate geometry.
+
+## Overview
+
+See your Gridfinity layout in photorealistic 3D with PBR materials, realistic lighting, and interactive camera controls. The preview updates automatically as you edit bins in the 2D grid or configurator.
+
+## Render Modes
+
+Switch between three distinct rendering styles:
+
+<CardGroup cols={3}>
+  <Card title="Standard (Solid)" icon="cube">
+    Photorealistic PBR plastic material:
+    - Full lighting and shadows
+    - Clearcoat finish (0.3)
+    - Roughness: 0.45, Metalness: 0.05
+    - Cast and receive shadows
+  </Card>
+  <Card title="X-Ray (Technical)" icon="xmark">
+    Transparent with edge highlights:
+    - 20% opacity for interior inspection
+    - Accent-colored edges (`#00d4aa`)
+    - No shadows (flat lighting)
+    - Ideal for checking dividers and lip
+  </Card>
+  <Card title="Blueprint" icon="pen-ruler">
+    Flat white with dark outlines:
+    - Pure white surfaces (`#f0f0f0`)
+    - Dark edges (`#222222`)
+    - Light gray background
+    - Technical drawing aesthetic
+  </Card>
+</CardGroup>
+
+<Tip>
+  Use **X-Ray mode** to inspect internal features like dividers, wall thickness, and stacking lips without rotating the camera.
+</Tip>
+
+## Camera Controls
+
+### OrbitControls
+
+Interactive camera with smooth damping:
+
+- **Left click + drag**: Rotate camera around target
+- **Right click + drag**: Pan camera horizontally/vertically  
+- **Mouse wheel**: Zoom in/out
+- **Damping factor**: 0.08 (smooth, responsive feel)
+
+### Camera Presets
+
+One-click views with smooth animation (300ms):
+
+<CardGroup cols={3}>
+  <Card title="Isometric" icon="cube">
+    3/4 perspective view:
+    - Default starting view
+    - Shows all bin features
+    - Perfect for presentation
+  </Card>
+  <Card title="Front" icon="eye">
+    Straight-on elevation:
+    - View from baseplate front
+    - Check bin heights and alignment
+    - 30% elevation angle
+  </Card>
+  <Card title="Top" icon="chevron-up">
+    Bird's-eye orthographic:
+    - Overhead view (1.2x distance)
+    - Verify grid layout
+    - Match 2D grid perspective
+  </Card>
+</CardGroup>
+
+<Note>
+  Camera presets automatically adjust distance based on your baseplate size (larger grids = farther camera).
+</Note>
+
+## Section View (Cutaway)
+
+Inspect internal geometry with a clipping plane:
+
+- Cuts through bins at selected bin's center depth
+- Reveals:
+  - Wall and bottom thickness  
+  - Interior divider construction
+  - Base profile (Z-shaped interlocking)
+  - Label shelf geometry
+- Camera automatically positions for optimal view
+- Clipping plane follows Z-axis (depth)
+
+<Warning>
+  Section view temporarily stores your camera position. When disabled, the camera smoothly returns to your previous view.
+</Warning>
+
+## Interactive Selection
+
+### Double-Click to Focus
+
+- **Double-click any bin** to:
+  1. Select it (updates 2D grid selection)
+  2. Animate camera to focus on that bin
+  3. Position camera at 2× bin height, 45° angle
+  4. Look at bin's vertical center
+
+<Tip>
+  Double-click is the fastest way to inspect a specific bin in a crowded layout.
+</Tip>
+
+### Selection Highlighting
+
+- Selected bins show **emissive glow** (cyan/teal)
+- Emissive intensity: 2.0
+- Color: `#004433` (dark cyan)
+- Visible in all render modes
+
+## Lighting Setup
+
+Three-point lighting for professional look:
+
+<Accordion title="Light Configuration">
+  **Ambient Light**
+  - Color: White (`0xffffff`)
+  - Intensity: 0.5 (standard), 0.8 (technical), 0.95 (blueprint)
+  - Provides base illumination
+
+  **Directional Light (Key)**
+  - Position: (100, 200, 150)
+  - Intensity: 1.2 (standard), 0.6 (technical), 0.3 (blueprint)
+  - Casts shadows (PCF soft shadows)
+  - Shadow map: 2048×2048
+  - Shadow camera frustum: 600×600 units
+
+  **Rim Light (Back)**
+  - Color: Blue-tinted (`0x4488ff`)
+  - Position: (-100, 100, -100)
+  - Intensity: 0.3
+  - Disabled in technical and blueprint modes
+</Accordion>
+
+## Dimension Labels
+
+Real-time 3D dimension annotations (when enabled):
+
+- Width label: Front edge center
+- Depth label: Right edge center
+- Height label: Top-right corner
+- Labels project from 3D world to 2D screen
+- Hidden when behind camera
+- Accent-colored badges with mm measurements
+- Updates every frame as camera moves
+
+<Note>
+  Dimension labels are only shown for the **single selected bin**. Multi-select hides labels to reduce clutter.
+</Note>
+
+## Baseplate Rendering
+
+Optional translucent baseplate (toggle in toolbar):
+
+- Dimensions: Grid width × grid depth × 5mm height
+- Material: Dark gray (`#333340`)
+- 30% opacity, semi-transparent
+- Receives shadows
+- Centered at world origin
+
+## Scene Details
+
+### Background & Grid
+
+- **Standard/Technical**: Dark navy (`#0a0a0f`) + grid helper
+- **Blueprint**: Light gray (`#f0f0f0`) + no grid
+- Grid helper: 500×500mm, 50 divisions
+- Ground shadow plane for depth perception
+
+### Material Properties
+
+<Accordion title="Standard Mode (PBR)">
+  ```typescript
+  {
+    color: bin.color,
+    roughness: 0.45,
+    metalness: 0.05,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.4,
+    side: THREE.DoubleSide
+  }
+  ```
+  Simulates real PLA plastic filament appearance.
+</Accordion>
+
+<Accordion title="Technical Mode (X-Ray)">
+  ```typescript
+  {
+    color: bin.color,
+    transparent: true,
+    opacity: 0.2,
+    roughness: 1.0,
+    metalness: 0,
+    depthWrite: false
+  }
+  ```
+  Allows seeing through bins to inspect internals.
+</Accordion>
+
+<Accordion title="Blueprint Mode">
+  ```typescript
+  {
+    color: 0xf0f0f0, // flat white
+    roughness: 1.0,
+    metalness: 0,
+    clearcoat: 0
+  }
+  ```
+  Technical drawing aesthetic with no reflections.
+</Accordion>
+
+## Geometry Pipeline
+
+Real-time CSG mesh generation:
+
+1. **Change detected** in bin parameters
+2. **Request sent** to Web Worker with bin config
+3. **Manifold WASM** generates CSG mesh (unions, subtractions)
+4. **Mesh transferred** back to main thread
+5. **BufferGeometry created** from vertices/triangles
+6. **Normals computed** for proper lighting
+7. **Coordinate swap**: Y↔Z (Manifold → Three.js convention)
+8. **Material applied** based on render mode
+9. **Scene updated** with new geometry
+
+<Warning>
+  Complex bins with many dividers may take 1-2 seconds to generate. A wireframe placeholder is shown during generation.
+</Warning>
+
+## Performance Features
+
+- **Web Worker**: Offloads CSG computation to background thread
+- **Mesh caching**: Identical bins reuse geometry
+- **Edge geometry**: Pre-computed for technical/blueprint modes
+- **Frustum culling**: Automatic (Three.js)
+- **Shadow maps**: 2048×2048 resolution (balanced quality/speed)
+- **Animation loop**: RequestAnimationFrame at monitor refresh rate
+
+## Stats Bar
+
+Bottom overlay shows real-time statistics:
+
+- Baseplate dimensions (e.g., "252x252mm")
+- Grid utilization (e.g., "18/36 cells")
+- Bin count (e.g., "5 bins")
+- Monospace font (JetBrains Mono)
+- Accent-colored when values > 0
+
+## Tips & Best Practices
+
+<Tip>
+  Enable **Section View** to verify wall thickness and divider spacing before exporting.
+</Tip>
+
+<Tip>
+  Use **X-Ray mode** to check that magnet holes and screw holes are positioned correctly.
+</Tip>
+
+<Tip>
+  **Blueprint mode** is ideal for creating documentation screenshots with clean, professional aesthetics.
+</Tip>
+
+<Note>
+  The 3D preview is fully client-side. No server uploads—all geometry is computed in your browser using WebAssembly.
+</Note>
+
+## Technical Specifications
+
+- **Renderer**: Three.js WebGLRenderer
+- **Camera**: PerspectiveCamera (45° FOV)
+- **CSG Engine**: Manifold WASM
+- **Shadow technique**: PCFSoftShadowMap
+- **Tone mapping**: ACES Filmic
+- **Anti-aliasing**: MSAA (enabled)
+- **Pixel ratio**: Device pixel ratio (Retina support)
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="2D Grid Canvas" icon="grid-2" href="/features/2d-grid">
+    Edit bin positions and dimensions
+  </Card>
+  <Card title="Export 3MF" icon="file-export" href="/features/export-3mf">
+    Export your 3D models for printing
+  </Card>
+</CardGroup>

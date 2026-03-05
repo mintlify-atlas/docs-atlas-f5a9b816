@@ -1,0 +1,268 @@
+---
+title: CSG Algorithm
+description: How Constructive Solid Geometry builds Gridfinity bins using boolean operations
+---
+
+Gridfinity Builder uses **Constructive Solid Geometry (CSG)** to create watertight, printable 3D meshes. CSG combines primitive shapes using boolean operations (union, subtraction, intersection) to construct complex geometry.
+
+## What is CSG?
+
+Constructive Solid Geometry is a modeling technique where complex objects are built by combining simple primitives:
+
+- **Union** (A ∪ B): Combine two shapes into one
+- **Subtraction** (A − B): Remove B from A
+- **Intersection** (A ∩ B): Keep only overlapping volume
+
+CSG guarantees **manifold** (watertight) meshes, essential for 3D printing.
+
+## Manifold WASM Library
+
+Gridfinity Builder uses [Manifold](https://github.com/elalish/manifold), a high-performance CSG library compiled to WebAssembly:
+
+```typescript useManifold.ts:7-19
+export async function initManifold(): Promise<ManifoldToplevel> {
+  if (instance) return instance;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    const wasm = await Module();
+    wasm.setup();
+    instance = wasm;
+    return wasm;
+  })();
+
+  return initPromise;
+}
+```
+
+The WASM module is initialized once and reused across all geometry operations.
+
+## Bin Building Process
+
+Each Gridfinity bin is constructed through a series of boolean operations. The process varies between preview and export modes, but follows the same core algorithm.
+
+### Preview Geometry (Simplified)
+
+From `binGeometry.ts:388-420`, the preview bin is built in 5 steps:
+
+<Steps>
+  <Step title="1. Outer Shell: Rounded Box">
+    Create a solid rounded box with configurable corner radius
+    
+    ```typescript binGeometry.ts:399-400
+    // 1. Flat base (z=0 → z=4.75)
+    const base = roundedBox(wasm, outerW, outerD, bodyStartZ, r);
+    ```
+    
+    The `roundedBox` helper (`binGeometry.ts:40-59`) extrudes a 2D rounded rectangle polygon to create a 3D solid.
+  </Step>
+  
+  <Step title="2. Inner Cavity: Subtract Hollow Body">
+    Create walls and floor by subtracting an inner cavity
+    
+    ```typescript binGeometry.ts:402-406
+    // 2. Hollow body (z=4.75 → top)
+    const hollowBody = createHollowBody(
+      wasm, outerW, outerD, bodyH, bodyStartZ,
+      config.wallThickness, config.bottomThickness, r,
+    );
+    ```
+    
+    See `binGeometry.ts:250-279` for the hollowing algorithm.
+  </Step>
+  
+  <Step title="3. Union Base + Body">
+    Combine the flat base and hollow body into a single mesh
+    
+    ```typescript binGeometry.ts:408-411
+    // 3. Union base + body
+    let bin = base.add(hollowBody);
+    base.delete();
+    hollowBody.delete();
+    ```
+  </Step>
+  
+  <Step title="4. Subtract Features: Magnet & Screw Holes">
+    Remove cylindrical holes for magnets and screws from the base
+    
+    ```typescript binGeometry.ts:413-414
+    // 4. Magnet & screw holes
+    bin = applyHoles(wasm, bin, config);
+    ```
+    
+    Holes are positioned at bin corners with deduplication for multi-cell bins (`binGeometry.ts:88-113`).
+  </Step>
+  
+  <Step title="5. Add Features: Label Shelf & Dividers">
+    Add or subtract final details like label shelves and interior dividers
+    
+    ```typescript binGeometry.ts:416-417
+    // 5. Label shelf + dividers
+    bin = applyFeatures(wasm, bin, config);
+    ```
+  </Step>
+</Steps>
+
+### Export Geometry (Full Fidelity)
+
+Export geometry (`binGeometry.ts:495-537`) includes the precise Gridfinity Z-profile base:
+
+<Steps>
+  <Step title="Per-Cell Base Profile">
+    Each cell gets a 5-layer stepped base profile for baseplate interlocking
+    
+    ```typescript binGeometry.ts:435-441
+    const Z_PROFILE_SECTIONS: ZSection[] = [
+      { zStart: 0.00, height: 0.80, shrinkBot: 4.40, shrinkTop: 4.40, rShrinkBot: 2.20 },
+      { zStart: 0.80, height: 0.80, shrinkBot: 4.40, shrinkTop: 2.80, rShrinkBot: 2.20 },
+      { zStart: 1.60, height: 0.55, shrinkBot: 2.80, shrinkTop: 2.80, rShrinkBot: 1.40 },
+      { zStart: 2.15, height: 0.80, shrinkBot: 2.80, shrinkTop: 1.20, rShrinkBot: 1.40 },
+    ];
+    ```
+    
+    Each section uses tapered extrusion to create chamfered steps.
+  </Step>
+  
+  <Step title="Bridge Slab">
+    A full-width slab bridges gaps between cells in multi-cell bins
+    
+    ```typescript binGeometry.ts:509-513
+    const slabH = bodyStartZ - 2.95;
+    const slab = roundedBox(wasm, outerW, outerD, slabH, r);
+    const slabPos = slab.translate([0, 0, 2.95]);
+    slab.delete();
+    ```
+  </Step>
+  
+  <Step title="Union + Features">
+    Same hollow body, holes, and features as preview mode
+  </Step>
+</Steps>
+
+## Hollowing Algorithm
+
+The `createHollowBody` function (`binGeometry.ts:250-279`) demonstrates CSG subtraction:
+
+```typescript binGeometry.ts:261-277
+const outerBody = roundedBox(wasm, outerW, outerD, bodyH, r);
+const outerBodyPos = outerBody.translate([0, 0, bodyStartZ]);
+outerBody.delete();
+
+const cavityStartZ = bodyStartZ + bottom;
+const cavityH = bodyH - bottom + 0.1; // overshoot for clean open top
+
+if (innerW > 0 && innerD > 0 && cavityH > 0) {
+  const cavity = roundedBox(wasm, innerW, innerD, cavityH, innerR);
+  const cavityPos = cavity.translate([0, 0, cavityStartZ]);
+  cavity.delete();
+
+  const hollow = outerBodyPos.subtract(cavityPos);
+  outerBodyPos.delete();
+  cavityPos.delete();
+  return hollow;
+}
+```
+
+Notice the 0.1mm overshoot on `cavityH` — this ensures a clean open top by extending the cavity slightly above the body.
+
+## Memory Management
+
+Manifold objects are manually memory-managed. Every created object must be deleted after use:
+
+```typescript Example Pattern
+const shape = wasm.Manifold.cube([10, 10, 10]);
+const translated = shape.translate([5, 0, 0]);
+shape.delete(); // Free original
+
+const result = translated.add(otherShape);
+translated.delete(); // Free intermediate
+otherShape.delete();
+return result; // Caller owns this
+```
+
+Helper functions like `unionAll` (`binGeometry.ts:62-72`) encapsulate this pattern:
+
+```typescript binGeometry.ts:62-72
+function unionAll(wasm: ManifoldToplevel, parts: any[]): any {
+  if (parts.length === 0) return wasm.Manifold.cube([0.001, 0.001, 0.001], true);
+  let result = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    const next = result.add(parts[i]);
+    result.delete();
+    parts[i].delete();
+    result = next;
+  }
+  return result;
+}
+```
+
+## Rounded Corners
+
+The `createRoundedRectPolygon` function (`binGeometry.ts:8-38`) generates a 2D polygon with circular arc corners:
+
+```typescript binGeometry.ts:23-35
+const corners: [number, number, number][] = [
+  [hw - r, -hd + r, -Math.PI / 2],
+  [hw - r, hd - r, 0],
+  [-hw + r, hd - r, Math.PI / 2],
+  [-hw + r, -hd + r, Math.PI],
+];
+
+for (const [cx, cy, startAngle] of corners) {
+  for (let i = 0; i <= SEGMENTS_PER_CORNER; i++) {
+    const angle = startAngle + (i / SEGMENTS_PER_CORNER) * (Math.PI / 2);
+    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+}
+```
+
+Each corner is approximated with 16 line segments (controlled by `SEGMENTS_PER_CORNER:4`).
+
+## Feature Application
+
+Features like dividers and label shelves are applied as final add/subtract operations:
+
+```typescript binGeometry.ts:311-362
+function applyFeatures(wasm: ManifoldToplevel, bin: any, config: BinConfig): any {
+  let result = bin;
+
+  // Label shelf (subtract from front wall)
+  if (config.labelShelf && config.labelWidth > 0 && cavityH > 0) {
+    try {
+      const shelf = createLabelShelf(...);
+      const after = result.subtract(shelf);
+      result.delete();
+      shelf.delete();
+      result = after;
+    } catch (err) {
+      console.warn('[BIN] label shelf failed:', err);
+    }
+  }
+
+  // Dividers (add internal walls)
+  if ((config.dividersX > 0 || config.dividersY > 0) && cavityH > 0) {
+    try {
+      const divs = createDividers(...);
+      if (divs) {
+        const after = result.add(divs);
+        result.delete();
+        divs.delete();
+        result = after;
+      }
+    } catch (err) {
+      console.warn('[BIN] dividers failed:', err);
+    }
+  }
+
+  return result;
+}
+```
+
+Each feature is wrapped in a try-catch to ensure partial failures don't crash the entire build.
+
+## Performance Considerations
+
+- **CSG is expensive**: Boolean operations scale with mesh complexity. Preview mode uses simpler geometry to stay fast.
+- **Web Workers**: All CSG runs in a background thread to avoid blocking the UI.
+- **Caching**: Identical configurations reuse cached meshes.
+- **Memory leaks**: Forgetting to `.delete()` Manifold objects causes WASM heap growth.

@@ -1,0 +1,349 @@
+---
+title: Installation
+description: Install Gridfinity Builder locally, with Docker, or as a PWA
+---
+
+## Prerequisites
+
+Before installing Gridfinity Builder locally, ensure you have:
+
+- **Node.js 18+** (LTS recommended)
+- **npm 9+** (included with Node.js)
+- **Modern browser** with WASM and ES2020+ support
+
+<Note>
+Gridfinity Builder requires WebAssembly support for the Manifold CSG engine. All modern browsers (Chrome, Edge, Firefox, Safari) are supported.
+</Note>
+
+---
+
+## Local Development Setup
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/tunelko/gridfinity-BambuLab-3D.git
+    cd gridfinity-BambuLab-3D
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+
+      ```bash pnpm
+      pnpm install
+      ```
+    </CodeGroup>
+    
+    This installs:
+    - **React 18.3+** - UI framework
+    - **Three.js 0.170+** - 3D rendering
+    - **Manifold 3D 3.3+** - WASM CSG engine
+    - **Zustand 5.0+** - State management
+    - **Vite 6.0+** - Build tool and dev server
+  </Step>
+
+  <Step title="Start the development server">
+    <CodeGroup>
+      ```bash npm
+      npm run dev
+      ```
+
+      ```bash yarn
+      yarn dev
+      ```
+
+      ```bash pnpm
+      pnpm dev
+      ```
+    </CodeGroup>
+    
+    The app starts at **http://localhost:5173**
+    
+    <Tip>
+    Vite's dev server includes hot module replacement (HMR) - changes to source files update instantly without page refresh.
+    </Tip>
+  </Step>
+
+  <Step title="Open in browser">
+    Navigate to [http://localhost:5173](http://localhost:5173)
+    
+    You should see the Gridfinity Builder interface with the default 6x6 grid.
+  </Step>
+</Steps>
+
+### Production Build
+
+To create an optimized production build:
+
+<CodeGroup>
+  ```bash npm
+  npm run build
+  npm run preview
+  ```
+
+  ```bash yarn
+  yarn build
+  yarn preview
+  ```
+
+  ```bash pnpm
+  pnpm build
+  pnpm preview
+  ```
+</CodeGroup>
+
+The build output is written to `dist/` and can be deployed to any static hosting service (Vercel, Netlify, GitHub Pages, etc.).
+
+---
+
+## Docker Setup
+
+<Steps>
+  <Step title="Build the Docker image">
+    ```bash
+    docker compose build --no-cache
+    ```
+    
+    This uses the `Dockerfile` which:
+    - Starts from `node:20-alpine` base image
+    - Installs dependencies with npm
+    - Exposes port 5173
+    - Runs the Vite dev server with `--host 0.0.0.0`
+  </Step>
+
+  <Step title="Start the container">
+    ```bash
+    docker compose up -d
+    ```
+    
+    The app runs in detached mode and is available at **http://localhost:5173**
+  </Step>
+
+  <Step title="Verify it's running">
+    ```bash
+    docker compose ps
+    ```
+    
+    You should see the `app` service with status `Up`.
+  </Step>
+</Steps>
+
+### Docker Volume Mounts
+
+The `docker-compose.yml` mounts source files for hot reloading:
+
+```yaml
+volumes:
+  - ./src:/app/src
+  - ./public:/app/public
+  - ./index.html:/app/index.html
+  - ./vite.config.ts:/app/vite.config.ts
+```
+
+Changes to these files update the running container without rebuilding.
+
+### Stop the Container
+
+```bash
+docker compose down
+```
+
+<Warning>
+Docker setup runs the development server, not a production build. For production deployment, build the app and serve the `dist/` folder with nginx or a CDN.
+</Warning>
+
+---
+
+## Progressive Web App (PWA) Installation
+
+Gridfinity Builder can be installed as a Progressive Web App for offline use.
+
+<Tabs>
+  <Tab title="Chrome / Edge (Desktop)">
+    <Steps>
+      <Step title="Open the live demo">
+        Navigate to [https://gridfinity.securedev.codes/](https://gridfinity.securedev.codes/)
+      </Step>
+      
+      <Step title="Install the app">
+        Look for the install icon in the address bar (⊕ or computer icon).
+        
+        Click it and select **Install** in the popup.
+        
+        Alternatively:
+        1. Click the three-dot menu (⋮)
+        2. Select **Install Gridfinity Builder...**
+      </Step>
+      
+      <Step title="Launch from desktop">
+        The app is now installed and can be launched from:
+        - Windows Start Menu
+        - macOS Applications folder
+        - Desktop shortcut (if created)
+        
+        It runs in a standalone window without browser UI.
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Chrome (Android)">
+    <Steps>
+      <Step title="Open in Chrome">
+        Navigate to [https://gridfinity.securedev.codes/](https://gridfinity.securedev.codes/)
+      </Step>
+      
+      <Step title="Add to Home Screen">
+        Tap the three-dot menu (⋮) in the top-right corner.
+        
+        Select **Add to Home Screen** or **Install app**.
+      </Step>
+      
+      <Step title="Launch from home screen">
+        An icon appears on your home screen. Tap it to launch the app in fullscreen mode.
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Safari (macOS)">
+    <Steps>
+      <Step title="Open in Safari">
+        Navigate to [https://gridfinity.securedev.codes/](https://gridfinity.securedev.codes/)
+      </Step>
+      
+      <Step title="Add to Dock">
+        1. Click **File** > **Add to Dock...**
+        2. Choose a name and confirm
+        
+        The app appears in your Dock as a standalone application.
+      </Step>
+    </Steps>
+    
+    <Note>
+    Safari on macOS 14+ supports PWA installation via "Add to Dock". Earlier versions may not show this option.
+    </Note>
+  </Tab>
+  
+  <Tab title="Safari (iOS)">
+    <Steps>
+      <Step title="Open in Safari">
+        Navigate to [https://gridfinity.securedev.codes/](https://gridfinity.securedev.codes/)
+      </Step>
+      
+      <Step title="Add to Home Screen">
+        1. Tap the Share button (□↑)
+        2. Scroll down and tap **Add to Home Screen**
+        3. Enter a name and tap **Add**
+      </Step>
+      
+      <Step title="Launch from home screen">
+        The app icon appears on your home screen. Tap it to launch in fullscreen mode.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+### Offline Support
+
+After installation, Gridfinity Builder works fully offline:
+
+- All assets are cached via Service Worker
+- Layouts are saved to browser localStorage
+- 3MF export runs entirely client-side
+
+<Tip>
+Use the **Check for Updates** button in the app to force-refresh cached assets when a new version is released.
+</Tip>
+
+---
+
+## Browser Compatibility
+
+| Browser | Support Level | Notes |
+|---------|---------------|-------|
+| Chrome / Edge | ✅ Full | Install prompt + offline support |
+| Firefox | ⚠️ Partial | Offline support, no install prompt |
+| Safari (macOS) | ⚠️ Partial | Manual "Add to Dock" required |
+| Safari (iOS) | ⚠️ Partial | Manual "Add to Home Screen" required |
+
+<Warning>
+Firefox does not show an install prompt for PWAs, but the app still works fully in the browser with offline support.
+</Warning>
+
+---
+
+## System Requirements
+
+### Minimum
+- **OS**: Windows 10, macOS 10.15, or Ubuntu 20.04
+- **RAM**: 4 GB
+- **Browser**: Chrome 90+, Edge 90+, Firefox 88+, Safari 14+
+
+### Recommended
+- **OS**: Windows 11, macOS 13+, or Ubuntu 22.04
+- **RAM**: 8 GB or more
+- **Browser**: Latest version of Chrome, Edge, or Safari
+- **GPU**: Dedicated GPU for smoother 3D rendering (optional)
+
+<Note>
+Geometry generation uses the Manifold WASM CSG engine, which is CPU-bound. Complex layouts with many dividers may take a few seconds to render on slower hardware.
+</Note>
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="3D preview is blank or shows errors">
+    - **Check WebGL support**: Visit [webglreport.com](https://webglreport.com/) to verify your browser supports WebGL 2.0
+    - **Update graphics drivers**: Outdated GPU drivers can cause rendering issues
+    - **Try a different browser**: Some browsers have better WebGL support than others
+  </Accordion>
+  
+  <Accordion title="WASM module fails to load">
+    - **Check browser compatibility**: Manifold 3D requires WASM support (Chrome 57+, Firefox 52+, Safari 11+)
+    - **Disable browser extensions**: Ad blockers or privacy extensions may block WASM loading
+    - **Clear cache**: Force refresh with Ctrl+Shift+R (Cmd+Shift+R on macOS)
+  </Accordion>
+  
+  <Accordion title="Dev server won't start on port 5173">
+    - **Check if port is in use**: Run `lsof -i :5173` (macOS/Linux) or `netstat -ano | findstr :5173` (Windows)
+    - **Kill the process**: `kill -9 <PID>` or use Task Manager
+    - **Use a different port**: Run `npm run dev -- --port 3000`
+  </Accordion>
+  
+  <Accordion title="Docker container exits immediately">
+    - **Check logs**: `docker compose logs app`
+    - **Verify Node version**: Container uses node:20-alpine (must support Vite 6)
+    - **Rebuild without cache**: `docker compose build --no-cache`
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Create your first Gridfinity layout in 5 minutes
+  </Card>
+  
+  <Card title="Features" icon="sparkles" href="/features/2d-grid">
+    Explore advanced features like auto-fill and BOM calculator
+  </Card>
+  
+  <Card title="Architecture" icon="code" href="/architecture/overview">
+    Learn how the geometry pipeline and CSG engine work
+  </Card>
+  
+  <Card title="Contributing" icon="github" href="https://github.com/tunelko/gridfinity-BambuLab-3D">
+    Report issues or contribute on GitHub
+  </Card>
+</CardGroup>

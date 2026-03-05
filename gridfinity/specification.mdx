@@ -1,0 +1,109 @@
+---
+title: Gridfinity Specification
+description: Official Gridfinity dimensions, tolerances, and key measurements
+---
+
+## What is Gridfinity?
+
+Gridfinity is an open-source modular storage system created by [Zack Freedman](https://www.youtube.com/@ZackFreedman). It provides a standardized grid-based system for organizing workspace items using 3D-printable bins and baseplates.
+
+The system uses a consistent cell-based grid where bins snap into baseplates, creating a flexible and reconfigurable storage solution for makers, electronics enthusiasts, and workshop organization.
+
+<Note>
+  This implementation follows the [official Gridfinity specification](https://gridfinity.xyz/specification/) with precise dimensions for 3D printing.
+</Note>
+
+## Official Dimensions
+
+All Gridfinity bins and baseplates follow these standardized dimensions:
+
+| Dimension | Value | Description |
+|-----------|-------|-------------|
+| Cell size | 42 x 42 mm | Base grid unit size |
+| Height unit | 7 mm | Vertical measurement unit ("u") |
+| Tolerance | 0.5 mm | Total clearance (0.25 mm per side) |
+| Bin corner radius | 3.75 mm | Standard rounded corners |
+| Base corner radius | 4.0 mm | Corner radius for base profile |
+| Base height | 4.75 mm | Total height of base profile |
+| Wall thickness | 1.2 mm | Default bin wall thickness |
+| Bottom thickness | 0.8 mm | Default bin floor thickness |
+| Stacking lip | 4.4 mm | Height of stacking lip feature |
+| Baseplate height | 6.4 mm | Standard baseplate thickness |
+
+## Key Measurements
+
+### Cell Size
+
+The fundamental building block of Gridfinity is the **42mm x 42mm cell**. All bins are measured in grid units:
+- A 1x1 bin occupies one cell (42mm x 42mm)
+- A 2x3 bin occupies 6 cells (84mm x 126mm)
+- Multi-cell bins maintain 42mm spacing between cell centers
+
+### Height Units
+
+Bin height is measured in **7mm units** (abbreviated as "u"):
+- 1u = 7mm tall
+- 3u = 21mm tall
+- 6u = 42mm tall
+
+The base profile adds an additional 4.75mm, so a 3u bin has a total height of 25.75mm (4.75mm base + 21mm body).
+
+### Tolerance
+
+A **0.5mm tolerance** is applied to ensure proper fit:
+- Actual bin size = (cells × 42mm) - 0.5mm
+- This provides 0.25mm clearance on each side
+- Prevents binding when inserting bins into baseplates
+- Allows for slight printer dimensional variations
+
+## Base Profile
+
+The Gridfinity base profile is a 5-layer stepped Z-profile that provides:
+- **Interlocking** with baseplate sockets
+- **Alignment** to the grid
+- **Stability** to prevent shifting
+
+The base profile includes:
+- Stepped chamfers for precise alignment
+- Per-cell geometry for multi-cell bins
+- Corner radius matching for smooth edges
+
+Total base height: **4.75mm**
+
+## Features
+
+### Magnet Holes
+
+- **Diameter:** 6mm (with 0.5mm clearance = 6.5mm actual)
+- **Depth:** 2mm (with 0.4mm clearance = 2.4mm actual)
+- **Inset:** 4.8mm from cell center
+- **Quantity:** 4 per cell unit (one at each corner)
+- **Purpose:** Hold 6x2mm neodymium magnets for secure attachment to steel baseplates
+
+### Screw Holes
+
+- **Thread:** M3 metric screw
+- **Diameter:** 3.2mm clearance hole
+- **Depth:** Through base (4.75mm)
+- **Quantity:** 4 per cell unit (one at each corner)
+- **Purpose:** Secure attachment to wooden or non-magnetic baseplates
+
+### Inter-Cell Gap
+
+Multi-cell bins have a small gap between cell units:
+- **Gap:** 0.5mm
+- **Purpose:** Allows independent cell base profiles to print cleanly
+- Bridged by upper slab for structural integrity
+
+## Tolerances and Printing
+
+For successful 3D printing:
+- Use **0.2mm layer height** or finer for base profile detail
+- Calibrate your printer for accurate dimensional output
+- The 0.5mm tolerance accommodates typical FDM printer variations
+- Corner radii ensure smooth surface finish and prevent sharp edges
+- Wall thickness (1.2mm) works with 0.4mm nozzles (3 perimeters)
+
+<Note>
+  All dimensions in this specification are taken directly from the `GF` constants object in `src/gridfinity/constants.ts:1-29`.
+</Note>

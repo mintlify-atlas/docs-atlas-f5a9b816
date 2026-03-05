@@ -1,0 +1,311 @@
+---
+title: Sharing & Saving
+description: Save your layouts locally and share them via URL
+---
+
+Gridfinity Builder runs entirely in your browser with no server. Your designs stay on your device, and you have full control over saving and sharing them.
+
+## Three Ways to Persist Your Work
+
+<CardGroup cols={3}>
+  <Card title="URL Hash" icon="link">
+    Share a link with your exact layout encoded in the URL
+  </Card>
+  
+  <Card title="LocalStorage" icon="floppy-disk">
+    Save and load layouts from your browser's storage
+  </Card>
+  
+  <Card title="3MF Export" icon="cube">
+    Download your design as a 3D-printable file
+  </Card>
+</CardGroup>
+
+---
+
+## URL Hash Sharing
+
+The most powerful feature: your **entire layout** is encoded in the URL hash.
+
+### How It Works
+
+When you design a layout, the app serializes:
+
+- Grid size (columns, rows)
+- All bins (position, size, features)
+- Bin configurations (dividers, labels, colors)
+- Groups and organization
+
+This data is encoded and appended to the URL as a hash (`#...`).
+
+### Example URL
+
+```
+https://gridfinity.securedev.codes/#eyJncmlkQ29scyI6Niwi...
+```
+
+The long string after `#` contains your complete design.
+
+### Sharing Your Layout
+
+1. Click **Copy Share Link** in the toolbar
+2. The URL is copied to your clipboard automatically
+3. Paste the link in:
+   - Email, Slack, Discord, etc.
+   - GitHub issues or pull requests  
+   - Documentation or wikis
+   - Bookmarks for your own reference
+
+<Tip>
+Anyone who opens your link will see your **exact layout** - same bins, same positions, same features. No account or login required.
+</Tip>
+
+### URL Sharing Benefits
+
+- **No server required**: Works offline after initial load
+- **No expiration**: Links never expire (as long as the app is hosted)
+- **Version control**: Save different URLs for different layout versions
+- **Collaboration**: Share with teammates for feedback
+
+### PWA Clipboard Support
+
+If you've installed Gridfinity Builder as a PWA (Progressive Web App):
+
+- The app uses the browser's native clipboard API
+- Works even when offline
+- Fallback to manual copy if clipboard access is denied
+
+<Tip>
+Bookmark your favorite layouts by saving the share link URL. This acts as version control for your designs.
+</Tip>
+
+---
+
+## LocalStorage Save/Load
+
+For quick iteration, use browser localStorage to save and load layouts.
+
+### Saving a Layout
+
+1. Design your layout
+2. Click **Save** in the toolbar or sidebar
+3. Enter a name (e.g., "Workshop V2")
+4. Layout is saved to browser storage
+
+### Loading a Layout
+
+1. Click **Load** in the toolbar or sidebar  
+2. Select a saved layout from the list
+3. Layout replaces your current design
+
+<Warning>
+Loading a layout will **replace** your current work. Use the URL share feature to create a backup before loading.
+</Warning>
+
+### LocalStorage Details
+
+- **Storage location**: Browser's localStorage (per-domain)
+- **Capacity**: ~5-10 MB (depends on browser)
+- **Persistence**: Survives browser restarts
+- **Scope**: Only accessible on the same device/browser
+
+### When to Use LocalStorage
+
+| Use Case | Recommended |
+|----------|-------------|
+| Quick save during design | ✅ Yes |
+| Multiple layout versions | ✅ Yes |
+| Sharing with others | ❌ No - use URL hash |
+| Long-term backup | ❌ No - export 3MF or bookmark URL |
+
+### Managing Saved Layouts
+
+- **Delete**: Remove layouts you no longer need to free up storage
+- **Overwrite**: Save with the same name to update an existing layout
+- **List**: View all saved layouts in the Load dialog
+
+<Tip>
+Use localStorage for **work-in-progress** designs, and URL sharing for **finalized** layouts you want to keep or share.
+</Tip>
+
+---
+
+## LocalStorage Limitations
+
+### Browser-Specific
+
+Layouts saved in Chrome won't appear in Firefox (even on the same device). Each browser maintains its own localStorage.
+
+### Device-Specific
+
+Layouts saved on your desktop won't sync to your phone. Use URL sharing for cross-device access.
+
+### Clearing Browser Data
+
+<Warning>
+If you clear your browser's cache/cookies, **saved layouts will be deleted**. Always keep a URL share link backup of important designs.
+</Warning>
+
+### Private/Incognito Mode
+
+In private browsing:
+
+- localStorage works during the session
+- **All data is deleted** when you close the browser
+- Use URL sharing instead for persistent access
+
+---
+
+## 3MF Export
+
+While not a "sharing" feature per se, exporting as 3MF creates a permanent file.
+
+### Export Options
+
+1. **Export Single Bin**: Download one bin as 3MF
+2. **Export All Bins**: Download entire layout as multi-object 3MF
+
+### File Details
+
+- **Format**: 3MF (3D Manufacturing Format)
+- **Contains**: Watertight STL meshes, metadata
+- **Opens in**: PrusaSlicer, Cura, Bambu Studio, etc.
+- **Size**: Typically 50-500 KB per bin
+
+<Tip>
+Exported 3MF files serve as a **permanent backup** of your geometry. You can't reload them into Gridfinity Builder, but you'll always have the printable files.
+</Tip>
+
+### Learn More
+
+See the [3MF Export guide](/features/export) for detailed instructions.
+
+---
+
+## Comparison: URL vs LocalStorage
+
+| Feature | URL Hash | LocalStorage |
+|---------|----------|-------------|
+| **Sharing** | ✅ Copy & paste link | ❌ Not shareable |
+| **Cross-device** | ✅ Works anywhere | ❌ Device-locked |
+| **Offline** | ✅ After first load | ✅ Always |
+| **Persistence** | ✅ Permanent (if saved) | ⚠️ Until cache cleared |
+| **Backup** | ✅ Bookmark URL | ❌ Manual export |
+| **Speed** | ⚠️ Long URLs | ✅ Instant load |
+| **Privacy** | ⚠️ Visible in URL | ✅ Local only |
+
+---
+
+## Best Practices
+
+### For Personal Use
+
+1. **Work in progress**: Save to localStorage frequently
+2. **Finished designs**: Copy share link and bookmark it
+3. **Final version**: Export 3MF to print
+
+### For Collaboration
+
+1. **Share drafts**: Send URL hash link for feedback
+2. **Iterate**: Make changes, generate new share link
+3. **Final approval**: Share both URL and exported 3MF
+
+### For Documentation
+
+1. **Include URL links** in READMEs or wikis
+2. **Screenshot** the 2D or 3D view
+3. **Export 3MF** and attach to GitHub releases
+
+<Tip>
+For important designs, use **all three methods**: Save to localStorage for quick access, bookmark the share URL for backup, and export 3MF for printing.
+</Tip>
+
+---
+
+## URL Encoding Details (Advanced)
+
+For developers and power users:
+
+### Encoding Process
+
+1. **Serialize**: Convert Zustand store state to JSON
+2. **Compress**: Optional gzip compression (future feature)
+3. **Encode**: Base64 encode the JSON string
+4. **Append**: Add to URL as hash fragment
+
+### Decoding Process
+
+1. **Extract**: Read hash from `window.location.hash`
+2. **Decode**: Base64 decode to JSON string
+3. **Parse**: JSON parse to object
+4. **Restore**: Populate Zustand store with layout data
+
+### URL Length Limits
+
+Most browsers support URLs up to **2,000 characters**. Gridfinity Builder URLs typically:
+
+- Simple layout (5 bins): ~500 chars
+- Medium layout (20 bins): ~1,500 chars  
+- Complex layout (50 bins): ~3,500 chars ⚠️
+
+<Warning>
+Very large layouts (50+ bins) may exceed URL length limits in some browsers. Use localStorage for extremely complex designs.
+</Warning>
+
+---
+
+## Troubleshooting
+
+### Share Link Not Copying
+
+**Cause**: Browser denied clipboard access  
+**Solution**: Manually copy the URL from the address bar
+
+### Layout Not Loading from URL
+
+**Cause**: Corrupted hash or old version  
+**Solution**: Clear the hash and start fresh, or load from localStorage
+
+### LocalStorage Full
+
+**Cause**: Browser localStorage quota exceeded  
+**Solution**: Delete old layouts, or clear browser data
+
+### Private Mode Warning
+
+**Cause**: localStorage cleared on browser close  
+**Solution**: Use URL sharing exclusively in private/incognito mode
+
+---
+
+## Privacy & Security
+
+### No Server Uploads
+
+Gridfinity Builder **never** uploads your data:
+
+- ✅ All processing happens in-browser
+- ✅ No analytics or tracking
+- ✅ No accounts or login required
+- ✅ Works fully offline (after first load)
+
+### URL Sharing Privacy
+
+When you share a URL:
+
+- ⚠️ Layout data is **visible** in the URL (encoded but not encrypted)
+- ⚠️ Anyone with the link can see your design
+- ⚠️ URLs may appear in browser history, server logs
+
+<Tip>
+For sensitive designs (proprietary parts, client work), use localStorage only and **do not share URLs**. Export 3MF files on a secure device instead.
+</Tip>
+
+---
+
+## Next Steps
+
+- Learn about [3MF Export](/features/export) for printing
+- Try [Layout Templates](/guides/layout-templates) to get started quickly
+- Use [Keyboard Shortcuts](/guides/keyboard-shortcuts) to work faster
+- Explore the [Bill of Materials](/features/bom) to estimate costs
